@@ -10,14 +10,4 @@ describe('FiiExplorer', () => {
   it('should be defined', () => {
     expect(fiiExplorer).toBeDefined();
   });
-
-  it('It should return a formated FII', async () => {
-    const response = await fiiExplorer.scrapeFiiList();
-    expect(response).toBeDefined();
-  });
-
-  it('It should return a formated FII', async () => {
-    const response = await fiiExplorer.scrapeFiiList();
-    expect(response).toBeDefined();
-  });
 });

@@ -1,10 +1,8 @@
-import jest from 'jest';
 import { B3History } from '@/modules/b3-history/model/scrapper';
 describe('B3History', () => {
   const b3History = new B3History();
-  const listOfLinks: String[] = [];
+  const listOfLinks: string[] = [];
 
-  beforeAll(() => { });
   describe('getFiiHistory', () => {
     it('should return a list of strings', async () => {
       const response = await b3History.getFiiHistoryList('VGIA11');
@@ -99,7 +97,55 @@ describe('B3History', () => {
       const link = 'https://bvmf.bmfbovespa.com.br/SIG/nao_existe';
 
       // Act and assert
-      await expect(b3History.extractDataFromHistoryPage(link)).rejects.toThrow();
+      await expect(
+        b3History.extractDataFromHistoryPage(link),
+      ).rejects.toThrow();
+    });
+  });
+
+  // Test suite for B3History.getFiiHistory method
+  describe('B3History.getFiiHistory', () => {
+    // Test case 1
+    it('should return an array of objects', async () => {
+      // Arrange
+      const fiiName = 'VGIA11';
+
+      // Act
+      const { data, errors } = await b3History.getFiiHistory(fiiName);
+
+      // Assert
+      expect(data).toBeDefined();
+      expect(data).not.toEqual([]);
+      data.forEach((element) => {
+        expect(typeof element).toBe('object');
+      });
+    });
+
+    // Test case 2
+    it('should return an array of objects with the correct keys', async () => {
+      // Arrange
+      const fiiName = 'VGIA11';
+      const keys = [
+        'dia',
+        'especif',
+        'n_negocios',
+        'part',
+        'quantidade',
+        'volume',
+        'aber',
+        'min',
+        'max',
+        'med',
+        'fech',
+      ];
+
+      // Act
+      const { data, errors } = await b3History.getFiiHistory(fiiName);
+
+      // Assert
+      data.forEach((element) => {
+        expect(Object.keys(element)).toEqual(keys);
+      });
     });
   });
 
