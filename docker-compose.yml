@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    image: node:19
+    working_dir: /app
+    container_name: nestjs
+    volumes:
+      - .:/app
+    ports:
+      - 3000:3000
+    # Install run npm install
+    command: sh -c "npm install && npm run start:dev"
+    depends_on:
+      - db
+    networks:
+      - db
+
+  db:
+    image: mysql
+    container_name: mysql
+    # NOTE: use of "mysql_native_password" is not recommended: https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password
+    # (this is just an example, not intended to be a production configuration)
+    command: --default-authentication-plugin=mysql_native_password
+    restart: 'no' # The option are: "no", "always", "on-failure", "unless-stopped"
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+    ports:
+      - 3306:3306
+    networks:
+      - db
+
+networks:
+  db:
+    driver: bridge
