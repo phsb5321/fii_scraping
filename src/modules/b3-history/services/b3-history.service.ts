@@ -33,7 +33,7 @@ export class B3HistoryService {
     private fiiB3HistoryModelDB: Repository<B3HistoryModelDB>,
     @InjectRepository(FiiModelDB)
     private fiiModelRepository: Repository<FiiModelDB>,
-  ) { }
+  ) {}
 
   @Cron(CRON_TIME_EVERY_MINUTE)
   async scrape_b3_history() {
