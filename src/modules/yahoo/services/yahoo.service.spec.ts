@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { YahooService } from '@/modules/yahoo/services/yahoo.service';
+import { YahooService } from './yahoo.service';
 
 describe('YahooService', () => {
   let service: YahooService;

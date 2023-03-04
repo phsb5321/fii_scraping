@@ -4,7 +4,7 @@ export interface StockI {
   companyName: string;
   tradingName: string;
   cnpj: string;
-  marketIndicator: string;
+  marketIndicator: number;
   typeBDR?: string;
   dateListing: Date;
   status: string;
@@ -20,7 +20,7 @@ export class Stock implements StockI {
   companyName: string;
   tradingName: string;
   cnpj: string;
-  marketIndicator: string;
+  marketIndicator: number;
   typeBDR?: string;
   dateListing: Date;
   status: string;
@@ -46,10 +46,12 @@ export class Stock implements StockI {
   }
 
   public static fromAbstract(object: { [key: string]: string }): Stock {
+    const [day, month, year] = object.dateListing.split('/');
     const stock: StockI = {
       ...object,
-      dateListing: new Date(object.dateListing),
+      dateListing: new Date(+year, +month - 1, +day),
       type: Number(object.type),
+      marketIndicator: Number(object.marketIndicator),
     } as StockI;
 
     return new Stock(stock);

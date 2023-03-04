@@ -13,25 +13,21 @@ export class StockModelDB implements Stock {
   id: number;
 
   @Column({
-    length: 10,
     comment: 'Code CVM',
   })
   codeCVM: string;
 
   @Column({
-    length: 100,
     comment: 'Issuing company name',
   })
   issuingCompany: string;
 
   @Column({
-    length: 100,
     comment: 'Company name',
   })
   companyName: string;
 
   @Column({
-    length: 100,
     comment: 'Trading name',
   })
   tradingName: string;
@@ -43,14 +39,14 @@ export class StockModelDB implements Stock {
   cnpj: string;
 
   @Column({
-    length: 3,
     comment: 'Market indicator',
+    // type: tinyint | smallint | mediumint | int | bigint
+    type: 'int',
   })
-  marketIndicator: string;
+  marketIndicator: number;
 
   @Column({
     nullable: true,
-    length: 30,
     comment: 'Type of BDR',
   })
   typeBDR?: string;
@@ -62,19 +58,16 @@ export class StockModelDB implements Stock {
   dateListing: Date;
 
   @Column({
-    length: 20,
     comment: 'Status of the stock',
   })
   status: string;
 
   @Column({
-    length: 30,
     comment: 'Segment of the stock',
   })
   segment: string;
 
   @Column({
-    length: 30,
     comment: 'Segment of the stock (English)',
   })
   segmentEng: string;
@@ -86,7 +79,6 @@ export class StockModelDB implements Stock {
   type: number;
 
   @Column({
-    length: 10,
     comment: 'Market of the stock',
   })
   market: string;

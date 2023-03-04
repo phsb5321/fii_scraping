@@ -19,10 +19,9 @@ interface QueryResponseI {
 
 @Injectable()
 export class B3CrawlerProvider {
-  constructor(
-    private readonly baseUrl: string = 'https://sistemaswebb3-listados.b3.com.br/listedCompaniesProxy/CompanyCall/GetInitialCompanies/',
-    private readonly httpClient = axios,
-  ) {}
+  baseUrl: string =
+    'https://sistemaswebb3-listados.b3.com.br/listedCompaniesProxy/CompanyCall/GetInitialCompanies/';
+  httpClient = axios;
 
   private async getStocksFromPage(
     paginationOptions: PaginationOptionsI,

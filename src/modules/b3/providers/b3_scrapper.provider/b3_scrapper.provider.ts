@@ -5,9 +5,9 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class B3ScrapperProvider {
-  constructor(
-    private baseUrl = 'https://bvmf.bmfbovespa.com.br/SIG/FormConsultaHistorico.asp?strTipoResumo=HISTORICO&strSocEmissora=',
-  ) { }
+  baseUrl =
+    'https://bvmf.bmfbovespa.com.br/SIG/FormConsultaHistorico.asp?strTipoResumo=HISTORICO&strSocEmissora=';
+
   private async getPageContent(
     url: string,
     debbug = false,

@@ -28,6 +28,10 @@ import { EntitiesModule } from './entities/entities.module';
       database: process.env.MYSQL_DATABASE,
       synchronize: true,
       autoLoadEntities: true,
+      // Brasil timezone
+      timezone: '-03:00',
+      // Date format dd/mm/yyyy
+      dateStrings: true,
     }),
 
     // Modules
@@ -43,4 +47,4 @@ import { EntitiesModule } from './entities/entities.module';
     AppService,
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -1,9 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
+
+import { StockI } from '@/app/entities/Stock/Stock.entity';
 import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';
-import { B3ScrapperProvider } from '../providers/b3_scrapper.provider/b3_scrapper.provider';
+import { StockModelDB } from '@/modules/b3/models/Stock.model';
+import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
+import { B3ScrapperProvider } from '@/modules/b3/providers/b3_scrapper.provider/b3_scrapper.provider';
+import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Cron } from '@nestjs/schedule';
 
 // Cron Explanation
 // ┌───────────── second (optional)
@@ -26,12 +31,90 @@ export class B3HistoryService {
   private readonly logger = new Logger(B3HistoryService.name);
 
   constructor(
-    private readonly fiiExplorer: B3ScrapperProvider,
     @InjectRepository(B3HistoryModelDB)
     private fiiB3HistoryModelDB: Repository<B3HistoryModelDB>,
+
     @InjectRepository(FiiModelDB)
     private fiiModelRepository: Repository<FiiModelDB>,
+
+    @InjectRepository(StockModelDB)
+    private stockModelRepository: Repository<StockModelDB>,
+
+    @Inject(B3ScrapperProvider)
+    private b3Scrapper: B3ScrapperProvider,
+
+    @Inject(B3CrawlerProvider)
+    private b3Crawler: B3CrawlerProvider,
   ) { }
+
+  // @Cron(CRON_TIME_EVERY_MINUTE)
+  async scrape_all_stocks() {
+    const stocks: StockI[] = await this.b3Crawler.getStocks();
+
+    let newStocksCount = 0;
+
+    const newStocks = await Promise.all(
+      stocks.map(async (stock) => {
+        // Search for an existing stock
+        const existingStock = await this.stockModelRepository.findOne({
+          where: { issuingCompany: stock.issuingCompany },
+        });
+
+        // If the stock already exists, skip it
+        if (existingStock) return;
+
+        // Create a new stock
+        const newStock = await this.stockModelRepository.create(stock);
+        newStocksCount++;
+
+        // Save the new stock
+        return await this.stockModelRepository.save(newStock);
+      }),
+    );
+
+    // Log the number of new stocks found
+    this.logger.verbose(`Found ${newStocksCount} new stocks`);
+
+    return newStocks;
+  }
+
+  // @Cron(CRON_TIME_EVERY_MINUTE)
+  async update_all_stocks() {
+    const stocks: StockI[] = await this.b3Crawler.getStocks();
+
+    let updatedStocksCount = 0;
+
+    const newStocks = await Promise.all(
+      stocks.map(async (stock) => {
+        // Search for an existing stock
+        const existingStock = await this.stockModelRepository.findOne({
+          where: { issuingCompany: stock.issuingCompany },
+        });
+
+        // If the stock already exists, update it
+        if (existingStock) {
+          const updatedStock = await this.stockModelRepository.save({
+            ...existingStock,
+            ...stock,
+          });
+
+          updatedStocksCount++;
+          return updatedStock;
+        }
+
+        // Create a new stock
+        const newStock = await this.stockModelRepository.create(stock);
+
+        // Save the new stock
+        return await this.stockModelRepository.save(newStock);
+      }),
+    );
+
+    // Log the number of new stocks found
+    this.logger.verbose(`Updated ${updatedStocksCount} new stocks`);
+
+    return newStocks;
+  }
 
   // @Cron(CRON_TIME_EVERY_MINUTE)
   async scrape_b3_history() {
@@ -55,7 +138,7 @@ export class B3HistoryService {
 
     await Promise.all(
       funds.map(async (fii) => {
-        const { data, errors } = await this.fiiExplorer.getFiiHistory(
+        const { data, errors } = await this.b3Scrapper.getFiiHistory(
           fii.codigo_do_fundo,
         );
 
