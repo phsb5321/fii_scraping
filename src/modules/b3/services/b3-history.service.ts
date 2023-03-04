@@ -1,11 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { B3History } from '@/modules/b3-history/model/scrapper';
-import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FiiRankingModelDB } from '@/modules/fii-explorer/model/FiiRanking.entity';
 import { Repository } from 'typeorm';
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
-import { B3HistoryModelDB } from '@/modules/b3-history/model/B3History.entity';
+import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';
+import { B3ScrapperProvider } from '../providers/b3_scrapper.provider/b3_scrapper.provider';
 
 // Cron Explanation
 // ┌───────────── second (optional)
@@ -28,14 +26,14 @@ export class B3HistoryService {
   private readonly logger = new Logger(B3HistoryService.name);
 
   constructor(
-    private readonly fiiExplorer: B3History,
+    private readonly fiiExplorer: B3ScrapperProvider,
     @InjectRepository(B3HistoryModelDB)
     private fiiB3HistoryModelDB: Repository<B3HistoryModelDB>,
     @InjectRepository(FiiModelDB)
     private fiiModelRepository: Repository<FiiModelDB>,
-  ) {}
+  ) { }
 
-  @Cron(CRON_TIME_EVERY_MINUTE)
+  // @Cron(CRON_TIME_EVERY_MINUTE)
   async scrape_b3_history() {
     const dictionary = {
       especif: 'especificacao_papel',

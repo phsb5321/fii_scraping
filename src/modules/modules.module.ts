@@ -1,4 +1,4 @@
-import { B3HistoryModule } from '@/modules/b3-history/b3-history.module';
+import { B3HistoryModule } from '@/modules/b3/b3-history.module';
 import { FiiExplorerModule } from '@/modules/fii-explorer/fii-explorer.module';
 import { YahooModule } from '@/modules/yahoo/yahoo.module';
 import { Module } from '@nestjs/common';
@@ -11,4 +11,4 @@ import { Module } from '@nestjs/common';
     YahooModule,
   ],
 })
-export class ModulesModule {}
+export class ModulesModule { }

@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
+
 @Entity({
   name: 'b3_history',
 })
