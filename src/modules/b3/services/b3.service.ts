@@ -22,13 +22,18 @@ import { Cron } from '@nestjs/schedule';
 // * * * * * *
 
 const CRON_TIME_EVERY_MINUTE = '* * * * * *';
+const CRON_TIME_EVERY_2_MINUTES = '*/2 * * * * *';
 const CRON_TIME_EVERY_5_MINUTES = '*/5 * * * * *';
 const CRON_TIME_EVERY_2_HOURS = '0 */2 * * * *';
 const CRON_TIME_EVERY_DAY_AT_8AM = '0 0 8 * * *';
 
+const CRON_TIME_EVERY_HOUR = '0 * * * * *';
+
+// const CRON_RUN_IT_NOW_AND_EVERY_10_MINUTES = '0 */10 * * * *';
+
 @Injectable()
-export class B3HistoryService {
-  private readonly logger = new Logger(B3HistoryService.name);
+export class B3Service {
+  private readonly logger = new Logger(B3Service.name);
 
   constructor(
     @InjectRepository(B3HistoryModelDB)
@@ -47,8 +52,13 @@ export class B3HistoryService {
     private b3Crawler: B3CrawlerProvider,
   ) { }
 
-  // @Cron(CRON_TIME_EVERY_MINUTE)
+  // @Cron(CRON_RUN_IT_NOW_AND_EVERY_10_MINUTES)
   async scrape_all_stocks() {
+    this.logger.verbose(
+      `Scraping all stocks ${new Intl.DateTimeFormat('pt-BR').format(
+        new Date(),
+      )}`,
+    );
     const stocks: StockI[] = await this.b3Crawler.getStocks();
 
     let newStocksCount = 0;
@@ -78,8 +88,9 @@ export class B3HistoryService {
     return newStocks;
   }
 
-  // @Cron(CRON_TIME_EVERY_MINUTE)
+  // @Cron(CRON_TIME_EVERY_HOUR)
   async update_all_stocks() {
+    this.logger.verbose(`Updating all stocks`);
     const stocks: StockI[] = await this.b3Crawler.getStocks();
 
     let updatedStocksCount = 0;
