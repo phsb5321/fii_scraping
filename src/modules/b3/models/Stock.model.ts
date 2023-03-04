@@ -1,4 +1,10 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 import { Stock } from '@/app/entities/Stock/Stock.entity';
 
@@ -82,4 +88,85 @@ export class StockModelDB implements Stock {
     comment: 'Market of the stock',
   })
   market: string;
+
+  @Column({
+    comment: 'Industry classification of the stock',
+  })
+  industryClassification: string;
+
+  @Column({
+    nullable: true,
+    comment: 'Industry classification of the stock (English)',
+  })
+  industryClassificationEng: string;
+
+  @Column({
+    comment: 'Activity of the stock',
+  })
+  activity: string;
+
+  @Column({
+    nullable: true,
+    comment: 'Website of the company',
+  })
+  website: string;
+
+  @Column({
+    nullable: true,
+    comment: 'Flag indicating if the stock has quotation',
+  })
+  hasQuotation: boolean;
+
+  @Column({
+    comment: 'Common institution of the stock',
+  })
+  institutionCommon: string;
+
+  @Column({
+    nullable: true,
+    comment: 'Preferred institution of the stock',
+  })
+  institutionPreferred: string;
+
+  @Column({
+    comment: 'Code of the stock',
+  })
+  code: string;
+
+  @Column({
+    type: 'simple-json',
+    comment: 'Other codes of the stock',
+  })
+  otherCodes: { code: string; isin: string }[];
+
+  @Column({
+    comment: 'Flag indicating if the stock has emissions',
+  })
+  hasEmissions: boolean;
+
+  @Column({
+    comment: 'Flag indicating if the stock has BDR',
+  })
+  hasBDR: boolean;
+
+  @Column({
+    nullable: true,
+    comment: 'Description of the category in BVMF',
+  })
+  describleCategoryBVMF: string;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    comment: 'Timestamp when the record was created',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)',
+    comment: 'Timestamp when the record was last updated',
+  })
+  updatedAt: Date;
 }

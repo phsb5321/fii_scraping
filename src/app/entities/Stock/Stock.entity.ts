@@ -12,9 +12,24 @@ export interface StockI {
   segmentEng: string;
   type: number;
   market: string;
+  industryClassification: string;
+  industryClassificationEng: string | null;
+  activity: string;
+  website: string;
+  hasQuotation: boolean | null;
+  institutionCommon: string;
+  institutionPreferred: string;
+  code: string;
+  otherCodes: { code: string; isin: string }[];
+  hasEmissions: boolean;
+  hasBDR: boolean;
+  describleCategoryBVMF: string | null;
 }
 
 export class Stock implements StockI {
+  constructor(stock: StockI) {
+    Object.assign(this, { ...stock });
+  }
   codeCVM: string;
   issuingCompany: string;
   companyName: string;
@@ -28,22 +43,18 @@ export class Stock implements StockI {
   segmentEng: string;
   type: number;
   market: string;
-
-  constructor(stock: StockI) {
-    this.codeCVM = stock.codeCVM;
-    this.issuingCompany = stock.issuingCompany;
-    this.companyName = stock.companyName;
-    this.tradingName = stock.tradingName;
-    this.cnpj = stock.cnpj;
-    this.marketIndicator = stock.marketIndicator;
-    this.typeBDR = stock.typeBDR;
-    this.dateListing = stock.dateListing;
-    this.status = stock.status;
-    this.segment = stock.segment;
-    this.segmentEng = stock.segmentEng;
-    this.type = stock.type;
-    this.market = stock.market;
-  }
+  industryClassification: string;
+  industryClassificationEng: string;
+  activity: string;
+  website: string;
+  hasQuotation: boolean;
+  institutionCommon: string;
+  institutionPreferred: string;
+  code: string;
+  otherCodes: { code: string; isin: string }[];
+  hasEmissions: boolean;
+  hasBDR: boolean;
+  describleCategoryBVMF: string;
 
   public static fromAbstract(object: { [key: string]: string }): Stock {
     const [day, month, year] = object.dateListing.split('/');
@@ -52,6 +63,10 @@ export class Stock implements StockI {
       dateListing: new Date(+year, +month - 1, +day),
       type: Number(object.type),
       marketIndicator: Number(object.marketIndicator),
+      hasQuotation: object.hasQuotation === 'true',
+      hasEmissions: object.hasEmissions === 'true',
+      hasBDR: object.hasBDR === 'true',
+      otherCodes: JSON.parse(object.otherCodes),
     } as StockI;
 
     return new Stock(stock);

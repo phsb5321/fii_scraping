@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
 
@@ -111,17 +111,19 @@ export class B3HistoryModelDB {
   })
   preco_fechamento: number;
 
-  @Column({
-    nullable: true,
-    comment: 'Timestamp of the record creation',
-    default: () => 'CURRENT_TIMESTAMP',
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    comment: 'Timestamp when the record was created',
   })
-  created_at: Date;
+  createdAt: Date;
 
-  @Column({
-    nullable: true,
-    comment: 'Timestamp of the last record update',
-    default: () => 'CURRENT_TIMESTAMP',
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)',
+    comment: 'Timestamp when the record was last updated',
   })
-  updated_at: Date;
+  updatedAt: Date;
+
 }
