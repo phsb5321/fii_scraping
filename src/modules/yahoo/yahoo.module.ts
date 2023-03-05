@@ -7,6 +7,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [TypeOrmModule.forFeature([StockModelDB, YahooHistoryModelDB])],
-  providers: [YahooService, YahooCrawlerProvider],
+  providers: [
+    // YahooService,
+    YahooService,
+
+    // YahooCrawlerProvider,
+    YahooCrawlerProvider,
+  ],
 })
 export class YahooModule { }

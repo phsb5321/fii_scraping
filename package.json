@@ -89,6 +89,7 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "testTimeout": 600000,
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {

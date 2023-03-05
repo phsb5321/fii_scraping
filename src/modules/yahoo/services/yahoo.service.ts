@@ -1,7 +1,7 @@
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
 import { YahooHistoryModelDB } from './../models/YahooHistory.model';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -32,7 +32,7 @@ export class YahooService {
     @InjectRepository(StockModelDB)
     private stockModelDB: Repository<StockModelDB>,
 
-    @InjectRepository(YahooCrawlerProvider)
+    @Inject(YahooCrawlerProvider)
     private yahooCrawlerProvider: YahooCrawlerProvider,
   ) { }
 
@@ -40,6 +40,5 @@ export class YahooService {
   async updateStocksHistory() {
     // Get all stocks
     const stocks = await this.stockModelDB.find();
-
   }
 }

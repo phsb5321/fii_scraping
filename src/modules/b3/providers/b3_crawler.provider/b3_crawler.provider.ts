@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 import { Stock, StockI } from '@/app/entities/Stock/Stock.entity';
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { Injectable } from '@nestjs/common';
+
 interface QueryOptionsI {
   language: string;
   pageNumber?: number;
@@ -33,31 +34,28 @@ export class B3CrawlerProvider {
     this.httpClient = axios.create();
   }
 
-  private async makeHttpRequest<T>(
-    url: string,
-    options?: Record<string, unknown>,
-  ): Promise<T> {
-    try {
-      const { data } = await this.httpClient.get<T>(url, options);
-      return data;
-    } catch (error) {
-      // Handle error
-      throw new Error(`Error making HTTP request: ${error.message}`);
-    }
-  }
-
+  /**
+   * Fetches stocks data from a specific page with the given pagination options and b3Option.
+   * @param paginationOptions An object containing pagination options.
+   * @param b3Option The b3 option to fetch data from.
+   * @returns A promise that resolves with the queried stocks data.
+   */
   private async getStocksFromPage(
-    paginationOptions: QueryOptionsI, // = { language: 'pt-br', pageNumber: 1, pageSize: 100 },
-    b3Option = this.b3Options.list, // = 'GetInitialCompanies/',
+    paginationOptions: QueryOptionsI,
+    b3Option = this.b3Options.list,
   ): Promise<QueryResponseI | { [key: string]: string }> {
     const paginationOptionsBase64 = Buffer.from(
       JSON.stringify(paginationOptions),
     ).toString('base64');
     const url = this.listUrl + b3Option + paginationOptionsBase64;
-    const response = await this.makeHttpRequest<AxiosResponse>(url);
-    return response.data as QueryResponseI | { [key: string]: string };
+    const { data } = await this.httpClient.get(url);
+    return data;
   }
 
+  /**
+   * Fetches all the available stocks and their respective details.
+   * @returns A promise that resolves with an array of stocks.
+   */
   public async getStocks(): Promise<StockI[]> {
     // Generate a PaginationOptions for the first page
     const paginationOptions: QueryOptionsI = {
@@ -74,8 +72,8 @@ export class B3CrawlerProvider {
     // Get the remaining pages
     const remainingPages = await Promise.all(
       Array.from(
-        { length: firstPage.page.totalPages - 1 }, // -1 because we already have the first page
-        (_, index) => index + 2, // +2 because we already have the first page
+        { length: firstPage.page.totalPages - 1 },
+        (_, index) => index + 2,
       ).map(
         async (pageNumber) =>
           await this.getStocksFromPage({
@@ -85,6 +83,7 @@ export class B3CrawlerProvider {
       ),
     );
 
+    // Merge the first page with the remaining pages
     const allPages = [firstPage, ...remainingPages];
 
     // Get all stocks from all pages
@@ -99,29 +98,38 @@ export class B3CrawlerProvider {
     }, []);
 
     // Now, get the details of each stock
-    const stocksAndDetails = await Promise.all(
-      allStocks.map(async (stock) => {
-        const stockDetails = await this.getStockDetails(stock);
-        return { ...stock, ...stockDetails };
-      }),
+    const stockDetailsPromises = allStocks.map((stock) =>
+      this.getStockDetails(stock.codeCVM),
     );
 
-    // Convert the stocks to StockI
+    // Wait for all stock details to be fetched
+    const stockDetails = await Promise.all(stockDetailsPromises);
+
+    // Merge the stock details with the stock data
+    const stocksAndDetails = allStocks.map((stock, i) => ({
+      ...stock,
+      ...stockDetails[i][0],
+    }));
+
+    // Create a Stock entity for each stock
     const stocks = stocksAndDetails.map((stock) => Stock.fromAbstract(stock));
 
     return stocks;
   }
 
+  /**
+   * Provides a method to retrieve details of a stock from B3 by its codeCVM.
+   */
   public async getStockDetails(
-    stock: StockI | StockI[],
+    codeCVM: string | string[],
   ): Promise<{ [key: string]: string }[]> {
     // If a single stock is provided, wrap it in an array
-    const stocks = Array.isArray(stock) ? stock : [stock];
+    const stocks = Array.isArray(codeCVM) ? codeCVM : [codeCVM];
 
     // Generate the QueryParams for all stocks
-    const queryParams: QueryOptionsI[] = stocks.map((s) => ({
+    const queryParams: QueryOptionsI[] = stocks.map((code) => ({
       language: 'pt-br',
-      codeCVM: s.codeCVM,
+      codeCVM: code,
     }));
 
     // Get the stock details using Promise.all
@@ -133,7 +141,7 @@ export class B3CrawlerProvider {
     );
 
     // If a single stock was provided, return the first item of the result array
-    if (!Array.isArray(stock))
+    if (!Array.isArray(codeCVM))
       return [stockDetails[0]] as { [key: string]: string }[];
 
     // Return the stock details
