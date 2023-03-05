@@ -6,16 +6,14 @@ import { Logger, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([FiiRankingModelDB, FiiModelDB]),
-  ],
+  imports: [TypeOrmModule.forFeature([FiiRankingModelDB, FiiModelDB])],
   providers: [
     // FiiExplorer,
     FiiExplorer,
     FiiExplorerService,
   ],
 })
-export class FiiExplorerModule { }
+export class FiiExplorerModule {}
 
 // q: where should I add the logger to the module?
 // a: add it to the providers array

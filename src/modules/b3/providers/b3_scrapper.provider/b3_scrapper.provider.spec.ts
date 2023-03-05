@@ -1,13 +1,25 @@
-import jest from 'jest';
-import { B3History } from '@/modules/b3-history/model/scrapper';
-describe('B3History', () => {
-  const b3History = new B3History();
-  const listOfLinks: String[] = [];
+import { Test, TestingModule } from '@nestjs/testing';
+import { B3ScrapperProvider } from './b3_scrapper.provider';
 
-  beforeAll(() => { });
+describe('B3ScrapperProvider', () => {
+  let provider: B3ScrapperProvider;
+  const listOfLinks: string[] = [];
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [B3ScrapperProvider],
+    }).compile();
+
+    provider = module.get<B3ScrapperProvider>(B3ScrapperProvider);
+  });
+
+  it('should be defined', () => {
+    expect(provider).toBeDefined();
+  });
+
   describe('getFiiHistory', () => {
     it('should return a list of strings', async () => {
-      const response = await b3History.getFiiHistoryList('VGIA11');
+      const response = await provider.getFiiHistoryList('VGIA11');
       // Expect response to be defined
       expect(response).toBeDefined();
       // Expect all elements to be a string
@@ -28,7 +40,7 @@ describe('B3History', () => {
       const link = listOfLinks[0];
 
       // Act
-      const response = await b3History.extractDataFromHistoryPage(link);
+      const response = await provider.extractDataFromHistoryPage(link);
 
       // Assert
       expect(response).toBeDefined();
@@ -41,7 +53,7 @@ describe('B3History', () => {
       const link = listOfLinks[0];
 
       // Act
-      const response = await b3History.extractDataFromHistoryPage(link);
+      const response = await provider.extractDataFromHistoryPage(link);
 
       // Assert
       response.forEach((element) => {
@@ -68,7 +80,7 @@ describe('B3History', () => {
       ];
 
       // Act
-      const response = await b3History.extractDataFromHistoryPage(link);
+      const response = await provider.extractDataFromHistoryPage(link);
 
       // Assert
       response.forEach((element) => {
@@ -83,7 +95,7 @@ describe('B3History', () => {
       const [month, year] = link.split('=').pop().split('-');
 
       // Act
-      const response = await b3History.extractDataFromHistoryPage(link);
+      const response = await provider.extractDataFromHistoryPage(link);
 
       // Assert
       response.forEach((element) => {
@@ -99,8 +111,53 @@ describe('B3History', () => {
       const link = 'https://bvmf.bmfbovespa.com.br/SIG/nao_existe';
 
       // Act and assert
-      await expect(b3History.extractDataFromHistoryPage(link)).rejects.toThrow();
+      await expect(provider.extractDataFromHistoryPage(link)).rejects.toThrow();
     });
   });
 
+  // Test suite for B3History.getFiiHistory method
+  describe('B3History.getFiiHistory', () => {
+    // Test case 1
+    it('should return an array of objects', async () => {
+      // Arrange
+      const fiiName = 'VGIA11';
+
+      // Act
+      const { data, errors } = await provider.getFiiHistory(fiiName);
+
+      // Assert
+      expect(data).toBeDefined();
+      expect(data).not.toEqual([]);
+      data.forEach((element) => {
+        expect(typeof element).toBe('object');
+      });
+    });
+
+    // Test case 2
+    it('should return an array of objects with the correct keys', async () => {
+      // Arrange
+      const fiiName = 'VGIA11';
+      const keys = [
+        'dia',
+        'especif',
+        'n_negocios',
+        'part',
+        'quantidade',
+        'volume',
+        'aber',
+        'min',
+        'max',
+        'med',
+        'fech',
+      ];
+
+      // Act
+      const { data, errors } = await provider.getFiiHistory(fiiName);
+
+      // Assert
+      data.forEach((element) => {
+        expect(Object.keys(element)).toEqual(keys);
+      });
+    });
+  });
 });

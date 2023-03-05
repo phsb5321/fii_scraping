@@ -1,6 +1,4 @@
 import * as cheerio from 'cheerio';
-import * as numeral from 'numeral';
-
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

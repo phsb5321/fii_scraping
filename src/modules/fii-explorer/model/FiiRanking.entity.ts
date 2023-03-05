@@ -19,7 +19,6 @@ export class FiiRankingModelDB {
   })
   id: number;
 
-  // Relation with FiiModelDB
   @ManyToOne(() => FiiModelDB, (fii) => fii.id, {
     nullable: false,
   })

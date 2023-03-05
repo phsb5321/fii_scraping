@@ -33,10 +33,10 @@ export class FiiExplorerService {
     private fiiRankingRepository: Repository<FiiRankingModelDB>,
     @InjectRepository(FiiModelDB)
     private fiiModelRepository: Repository<FiiModelDB>,
-  ) { }
+  ) {}
 
-  // @Cron(CRON_TIME_EVERY_MINUTE)
-  async listFunds() {
+  @Cron(CRON_TIME_EVERY_DAY_AT_8AM)
+  async scrape_fii_ranking() {
     const funds = await this.fiiExplorer.scrapeFiiList();
 
     // Log the number of funds found

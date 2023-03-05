@@ -5,6 +5,8 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { InfraModule } from '@/app/infra/infra.module';
+import { EntitiesModule } from './entities/entities.module';
 
 @Module({
   imports: [
@@ -26,10 +28,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       database: process.env.MYSQL_DATABASE,
       synchronize: true,
       autoLoadEntities: true,
+      // Brasil timezone
+      timezone: '-03:00',
+      // Date format dd/mm/yyyy
+      dateStrings: true,
     }),
 
     // Modules
     ModulesModule,
+
+    InfraModule,
+
+    EntitiesModule,
   ],
   controllers: [AppController],
   providers: [
