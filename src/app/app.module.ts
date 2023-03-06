@@ -1,12 +1,11 @@
 import { AppController } from '@/app/controllers/app.controller';
+import { InfraModule } from '@/app/infra/infra.module';
 import { AppService } from '@/app/services/app.service';
 import { ModulesModule } from '@/modules/modules.module';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { InfraModule } from '@/app/infra/infra.module';
-import { EntitiesModule } from './entities/entities.module';
 
 @Module({
   imports: [
@@ -38,8 +37,6 @@ import { EntitiesModule } from './entities/entities.module';
     ModulesModule,
 
     InfraModule,
-
-    EntitiesModule,
   ],
   controllers: [AppController],
   providers: [
