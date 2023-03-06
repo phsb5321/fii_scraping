@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 
 import { StockI } from '@/app/entities/Stock/Stock.entity';
 import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';
@@ -7,29 +7,29 @@ import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3
 import { B3ScrapperProvider } from '@/modules/b3/providers/b3_scrapper.provider/b3_scrapper.provider';
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Cron } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
 
-// Cron Explanation
-// ┌───────────── second (optional)
-// │ ┌───────────── minute
-// │ │ ┌───────────── hour
-// │ │ │ ┌───────────── day of month
-// │ │ │ │ ┌───────────── month
-// │ │ │ │ │ ┌───────────── day of week
-// │ │ │ │ │ │
-// │ │ │ │ │ │
-// * * * * * *
+// *    *    *    *    *    *
+// -    -    -    -    -    -
+// |    |    |    |    |    |
+// |    |    |    |    |    +----- day of the week (0 - 6) (Sunday = 0)
+// |    |    |    |    +------- month (1 - 12)
+// |    |    |    +--------- day of the month (1 - 31)
+// |    |    +----------- hour (0 - 23)
+// |    +------------- min (0 - 59)
+// +--------------- second (0 - 59) (optional)
 
-const CRON_TIME_EVERY_MINUTE = '* * * * * *';
-const CRON_TIME_EVERY_2_MINUTES = '*/2 * * * * *';
-const CRON_TIME_EVERY_5_MINUTES = '*/5 * * * * *';
-const CRON_TIME_EVERY_2_HOURS = '0 */2 * * * *';
-const CRON_TIME_EVERY_DAY_AT_8AM = '0 0 8 * * *';
+const CRON_TIME_EVERY_5_SECONDS = '*/5 * * * * *';
+const CRON_TIME_EVERY_10_SECONDS = '*/10 * * * * *';
 
-const CRON_TIME_EVERY_HOUR = '0 * * * * *';
-
-// const CRON_RUN_IT_NOW_AND_EVERY_10_MINUTES = '0 */10 * * * *';
+const CRON_TIME_EVERY_MINUTE = '*/1 * * * *';
+const CRON_TIME_EVERY_2_MINUTES = '*/2 * * * *';
+const CRON_TIME_EVERY_5_MINUTES = '*/5 * * * *';
+const CRON_RUN_EVERY_10_MINUTES = '*/10 * * * *';
+const CRON_TIME_EVERY_2_HOURS = '0 */2 * * *';
+const CRON_TIME_EVERY_DAY_AT_8AM = '0 8 * * *';
+const CRON_TIME_EVERY_HOUR = '0 * * * *';
 
 @Injectable()
 export class B3Service {
@@ -52,13 +52,9 @@ export class B3Service {
     private b3Crawler: B3CrawlerProvider,
   ) { }
 
-  // @Cron(CRON_RUN_IT_NOW_AND_EVERY_10_MINUTES)
+  // @Cron(CRON_RUN_EVERY_10_MINUTES)
+  @LogMethod(new Logger(B3Service.name))
   async scrape_all_stocks() {
-    this.logger.verbose(
-      `Scraping all stocks ${new Intl.DateTimeFormat('pt-BR').format(
-        new Date(),
-      )}`,
-    );
     const stocks: StockI[] = await this.b3Crawler.getStocks();
 
     let newStocksCount = 0;
@@ -88,43 +84,39 @@ export class B3Service {
     return newStocks;
   }
 
-  // @Cron(CRON_TIME_EVERY_HOUR)
+  // @Cron(CRON_TIME_EVERY_MINUTE)
+  @LogMethod(new Logger(B3Service.name))
   async update_all_stocks() {
-    this.logger.verbose(`Updating all stocks`);
-    const stocks: StockI[] = await this.b3Crawler.getStocks();
+    const stocks: StockI[] = await this.stockModelRepository.find({
+      order: { updatedAt: 'DESC' },
+      take: 1000,
+    });
 
     let updatedStocksCount = 0;
 
-    const newStocks = await Promise.all(
-      stocks.map(async (stock) => {
-        // Search for an existing stock
-        const existingStock = await this.stockModelRepository.findOne({
-          where: { issuingCompany: stock.issuingCompany },
-        });
+    while (stocks.length > 0) {
+      const stockDetailsPromises = stocks.map((stock) =>
+        this.b3Crawler.getStockDetails(stock.codeCVM.toString()),
+      );
 
-        // If the stock already exists, update it
-        if (existingStock) {
-          const updatedStock = await this.stockModelRepository.save({
-            ...existingStock,
-            ...stock,
-          });
+      const stockDetails = await Promise.all(stockDetailsPromises);
 
-          updatedStocksCount++;
-          return updatedStock;
-        }
+      const updatedStockPromises = stockDetails.map((stockDetail, index) =>
+        this.stockModelRepository.save({
+          ...stocks[index],
+          ...stockDetail[0],
+          updatedAt: new Date(),
+        }),
+      );
 
-        // Create a new stock
-        const newStock = await this.stockModelRepository.create(stock);
+      const updatedStocks = await Promise.all(updatedStockPromises);
+      updatedStocksCount += updatedStocks.length;
 
-        // Save the new stock
-        return await this.stockModelRepository.save(newStock);
-      }),
-    );
+      stocks.splice(0, 1000);
+    }
 
-    // Log the number of new stocks found
-    this.logger.verbose(`Updated ${updatedStocksCount} new stocks`);
-
-    return newStocks;
+    // Log the number of stocks updated
+    this.logger.verbose(`Updated ${updatedStocksCount} stocks`);
   }
 
   // @Cron(CRON_TIME_EVERY_MINUTE)
@@ -193,4 +185,28 @@ export class B3Service {
       }),
     );
   }
+}
+
+export function LogMethod(logger: Logger) {
+  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+    const originalMethod = descriptor.value;
+    descriptor.value = async function (...args: any[]) {
+      const logMessage = `Method ${propertyKey} called at ${new Intl.DateTimeFormat(
+        'pt-BR',
+        {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          second: 'numeric',
+          timeZone: 'America/Sao_Paulo',
+        },
+      ).format(new Date())}`;
+      logger.verbose(logMessage);
+      const result = await originalMethod.apply(this, args);
+      return result;
+    };
+    return descriptor;
+  };
 }

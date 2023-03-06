@@ -97,22 +97,8 @@ export class B3CrawlerProvider {
       return accumulator;
     }, []);
 
-    // Now, get the details of each stock
-    const stockDetailsPromises = allStocks.map((stock) =>
-      this.getStockDetails(stock.codeCVM),
-    );
-
-    // Wait for all stock details to be fetched
-    const stockDetails = await Promise.all(stockDetailsPromises);
-
-    // Merge the stock details with the stock data
-    const stocksAndDetails = allStocks.map((stock, i) => ({
-      ...stock,
-      ...stockDetails[i][0],
-    }));
-
     // Create a Stock entity for each stock
-    const stocks = stocksAndDetails.map((stock) => Stock.fromAbstract(stock));
+    const stocks = allStocks.map((stock) => Stock.fromAbstract(stock));
 
     return stocks;
   }
@@ -120,9 +106,7 @@ export class B3CrawlerProvider {
   /**
    * Provides a method to retrieve details of a stock from B3 by its codeCVM.
    */
-  public async getStockDetails(
-    codeCVM: string | string[],
-  ): Promise<{ [key: string]: string }[]> {
+  public async getStockDetails(codeCVM: string | string[]): Promise<Stock[]> {
     // If a single stock is provided, wrap it in an array
     const stocks = Array.isArray(codeCVM) ? codeCVM : [codeCVM];
 
@@ -140,11 +124,11 @@ export class B3CrawlerProvider {
       ),
     );
 
-    // If a single stock was provided, return the first item of the result array
-    if (!Array.isArray(codeCVM))
-      return [stockDetails[0]] as { [key: string]: string }[];
+    // Create a Stock entity for each stock
+    const stocksEntities = stockDetails.map(
+      (stock) => new Stock(stock as StockI),
+    );
 
-    // Return the stock details
-    return stockDetails as { [key: string]: string }[];
+    return stocksEntities;
   }
 }
