@@ -88,7 +88,7 @@ export class B3Service {
   @LogMethod(new Logger(B3Service.name))
   async update_all_stocks() {
     const stocks: StockI[] = await this.stockModelRepository.find({
-      order: { updatedAt: 'DESC' },
+      order: { updatedAt: 'ASC' },
       take: 1000,
     });
 

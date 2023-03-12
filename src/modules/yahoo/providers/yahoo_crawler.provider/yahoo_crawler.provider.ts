@@ -13,9 +13,13 @@ export class YahooCrawlerProvider {
     '?period1=1646427000&period2=1677963000&interval=1d&events=history&includeAdjustedClose=true';
 
   async getStock(stockCode: string): Promise<YahooStockHIstoryI[]> {
-    const { data } = await axios.get(
-      `${this.baseUrl}${stockCode}${this.defaultConfigs}`,
-    );
+    const { data } = await axios
+      .get(`${this.baseUrl}${stockCode}${this.defaultConfigs}`)
+      .catch((error) => {
+        throw new Error(
+          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.defaultConfigs}`,
+        );
+      });
 
     // Parse data to JSON
     const parsedData = this.parseCSV(data);
