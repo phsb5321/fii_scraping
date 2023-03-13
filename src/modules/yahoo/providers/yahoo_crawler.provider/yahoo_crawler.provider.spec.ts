@@ -1,3 +1,4 @@
+import { YahooDividend } from './../../../../app/entities/Dividend/Dividend.entity';
 import { YahooStockHIstory } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 
@@ -25,20 +26,43 @@ describe('YahooCrawlerProvider', () => {
 
   it('should return a stock', async () => {
     const stockCode = 'PETR4.SA';
-    const stock = await provider.getStock(stockCode);
+    const stock = await provider.getStockTradeHistory(stockCode);
     expect(stock).toBeDefined();
   });
 
   it('should return a stock with the correct keys', async () => {
     // Get the stock
     const stockCode = 'BBAS3.SA';
-    const stock = await provider.getStock(stockCode);
+    const stock = await provider.getStockTradeHistory(stockCode);
 
     // Get the keys
     const keys = Object.keys(stock[0]);
 
     // Get the keys from the entity
     const entityKeys = Object.keys(new YahooStockHIstory(stock[0]));
+
+    // Compare the keys
+    expect(keys).toEqual(entityKeys);
+  });
+
+  // Test getStockDividends
+  it('should return a stock', async () => {
+    const stockCode = 'PETR4.SA';
+    const stock = await provider.getStockDividends(stockCode);
+    console.log("🚀 ~ file: yahoo_crawler.provider.spec.ts:52 ~ it ~ stock:", stock)
+    expect(stock).toBeDefined();
+  });
+
+  it('should return a stock with the correct keys', async () => {
+    // Get the stock
+    const stockCode = 'BBAS3.SA';
+    const stock = await provider.getStockDividends(stockCode);
+
+    // Get the keys
+    const keys = Object.keys(stock[0]);
+
+    // Get the keys from the entity
+    const entityKeys = Object.keys(new YahooDividend(stock[0]));
 
     // Compare the keys
     expect(keys).toEqual(entityKeys);

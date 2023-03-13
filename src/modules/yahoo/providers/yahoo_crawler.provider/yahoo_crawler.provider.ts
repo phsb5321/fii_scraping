@@ -4,20 +4,27 @@ import {
   YahooStockHIstoryI,
   YahooStockHIstory,
 } from '@/app/entities/YahooHistory/YahooHistory.entity';
+
+import {
+  YahooDividend,
+  YahooDividendI,
+} from '@/app/entities/Dividend/Dividend.entity';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class YahooCrawlerProvider {
   baseUrl = 'https://query1.finance.yahoo.com/v7/finance/download/';
-  defaultConfigs =
+  historyConfigs =
     '?period1=1646427000&period2=1677963000&interval=1d&events=history&includeAdjustedClose=true';
+  dividendConfigs =
+    '?period1=946857600&period2=1678579200&interval=1d&events=div&includeAdjustedClose=true';
 
-  async getStock(stockCode: string): Promise<YahooStockHIstoryI[]> {
+  async getStockTradeHistory(stockCode: string): Promise<YahooStockHIstoryI[]> {
     const { data } = await axios
-      .get(`${this.baseUrl}${stockCode}${this.defaultConfigs}`)
+      .get(`${this.baseUrl}${stockCode}${this.historyConfigs}`)
       .catch((error) => {
         throw new Error(
-          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.defaultConfigs}`,
+          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.historyConfigs}`,
         );
       });
 
@@ -27,6 +34,26 @@ export class YahooCrawlerProvider {
     // Now, format the Date key to a Date object
     const formattedData: YahooStockHIstoryI[] = parsedData.map((item) => {
       return YahooStockHIstory.fromAbstract(item);
+    });
+
+    return formattedData;
+  }
+
+  async getStockDividends(stockCode: string): Promise<YahooDividendI[]> {
+    const { data } = await axios
+      .get(`${this.baseUrl}${stockCode}${this.dividendConfigs}`)
+      .catch((error) => {
+        throw new Error(
+          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.dividendConfigs}`,
+        );
+      });
+
+    // Parse data to JSON
+    const parsedData = this.parseCSV(data);
+
+    // Now, format the Date key to a Date object
+    const formattedData: YahooDividendI[] = parsedData.map((item) => {
+      return YahooDividend.fromAbstract(item);
     });
 
     return formattedData;

@@ -1,11 +1,13 @@
+import { IsNull, LessThan, Not, Repository } from 'typeorm';
+
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
+import { StockCodeModelDB } from '@/modules/b3/models/StockCode.model';
+import { YahooDividendHistoryModelDB } from '@/modules/yahoo/models/YahooDividendHistory.model';
+import { YahooHistoryModelDB } from '@/modules/yahoo/models/YahooHistory.model';
 import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
-import { YahooHistoryModelDB } from './../models/YahooHistory.model';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, LessThan, Not, Repository } from 'typeorm';
-import { YahooStockHIstoryI } from '@/app/entities/YahooHistory/YahooHistory.entity';
 
 // *    *    *    *    *    *
 // -    -    -    -    -    -
@@ -49,28 +51,33 @@ export class YahooService {
     @InjectRepository(StockModelDB)
     private stockModelDB: Repository<StockModelDB>,
 
+    @InjectRepository(StockCodeModelDB)
+    private stockCodeModelDB: Repository<StockCodeModelDB>,
+
+    @InjectRepository(YahooDividendHistoryModelDB)
+    private yahooDividendHistoryModelDB: Repository<YahooDividendHistoryModelDB>,
+
     @Inject(YahooCrawlerProvider)
     private yahooCrawlerProvider: YahooCrawlerProvider,
   ) { }
 
-  @Cron(CRON_TIME_EVERY_10_SECONDS)
+  // @Cron(CRON_TIME_EVERY_10_SECONDS)
   @LogMethod(new Logger(YahooService.name))
   async updateStocksHistory() {
-    const stocks = await this.stockModelDB.find({
-      // Where otherCodes IS NOT NULL and it has been updated more than 24 hours ago
-      where: {
-        otherCodes: Not(IsNull()),
-        updatedAt: LessThan(
-          new Date(new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */),
+    // Rewrite the code above to make a left join with the stock table
+    const stockCodes = await this.stockCodeModelDB
+      .createQueryBuilder('stockCode')
+      .leftJoinAndSelect('stockCode.stock', 'stock')
+      .where('stockCode.updatedAt < :updatedAt', {
+        updatedAt: new Date(
+          new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
         ),
-      },
-      // Order BY UpdatedAt DESC
-      order: { updatedAt: 'ASC' },
-      // Limit 10
-      take: 10,
-    });
+      })
+      .orderBy('stockCode.updatedAt', 'ASC')
+      .limit(100)
+      .getMany();
 
-    if (!stocks.length) {
+    if (!stockCodes.length) {
       this.logger.verbose(
         `No stocks to update at ${new Intl.DateTimeFormat(
           'pt-BR',
@@ -81,63 +88,38 @@ export class YahooService {
     }
 
     const stocksHistory = await Promise.all(
-      stocks.map(async (stock) => {
-        const stockCodes = [
-          stock.code,
-          ...(stock.otherCodes || []).flatMap((code) => code?.code || []),
-        ];
+      stockCodes.map(async ({ code, stock }) => {
+        const stockDotSa = code + '.SA';
 
-        const stockHistories = await Promise.all(
-          stockCodes.map(async (code) => {
-            let stockHistory: YahooStockHIstoryI[];
-            try {
-              stockHistory = await this.yahooCrawlerProvider.getStock(
-                `${code}.SA`,
+        const yahooStockHistory = await this.yahooCrawlerProvider
+          .getStockTradeHistory(stockDotSa)
+          .catch((error) => {
+            // If the error is 404 it means that the stock code is not valid
+            if (error.message.includes('404')) {
+              this.logger.warn(
+                `Stock code ${stockDotSa} is not valid. Removing from the database`,
               );
-              this.logger.verbose(
-                `Updated stock ${code} at ${new Intl.DateTimeFormat(
-                  'pt-BR',
-                  DATE_OPTIONS as any,
-                ).format(new Date())} `,
-              );
-            } catch ({ message }) {
-              // Log that the stock history could not be updated
-              this.logger.error(message);
-              return [];
+              this.stockCodeModelDB.delete({ code: stockDotSa });
             }
-            // For each stock history, If there is no stock history in the database with the same date, save it
-            await Promise.all(
-              stockHistory.map(async (history) => {
-                // Check if there is a stock history with the same date
-                const stockHistoryInDB = await this.yahooHistoryModelDB.findOne(
-                  {
-                    where: { date: history.date, stockCode: code },
-                  },
-                );
+          });
 
-                // If there is no stock history in the database with the same date, save it
-                if (!stockHistoryInDB) {
-                  await this.yahooHistoryModelDB.save(
-                    this.yahooHistoryModelDB.create({
-                      ...history,
-                      stockCode: code,
-                      stock,
-                    }),
-                  );
-                }
-              }),
-            );
-            return stockHistory;
-          }),
+        if (!yahooStockHistory) return [];
+
+        const yahooStockHistorySaved = await this.yahooHistoryModelDB.upsert(
+          yahooStockHistory.map((stockHistory) => ({
+            ...stockHistory,
+            stock,
+          })),
+          ['date', 'stock.id'],
         );
 
-        return stockHistories;
+        return yahooStockHistorySaved;
       }),
     );
 
-    // Log how many stocks were updated
+    // Log how many stocks were update
     this.logger.verbose(
-      `Updated ${stocks.length} stocks at ${new Intl.DateTimeFormat(
+      `Updated ${stockCodes.length} stocks at ${new Intl.DateTimeFormat(
         'pt-BR',
         DATE_OPTIONS as any,
       ).format(new Date())} `,
@@ -145,14 +127,90 @@ export class YahooService {
 
     // Update the stock last update date
     await Promise.all(
-      stocks.map(async (stock) => {
-        await this.stockModelDB.update(stock.id, {
+      stockCodes.map(async (stock) => {
+        await this.stockCodeModelDB.update(stock.id, {
           updatedAt: new Date(),
         });
       }),
     );
 
     return stocksHistory;
+  }
+
+  // @Cron(CRON_TIME_EVERY_10_SECONDS)
+  @LogMethod(new Logger(YahooService.name))
+  async updateStocksDividends() {
+    const stockCodes = await this.stockCodeModelDB
+      .createQueryBuilder('stockCode')
+      .leftJoinAndSelect('stockCode.stock', 'stock')
+      .where('stockCode.updatedAt < :updatedAt', {
+        updatedAt: new Date(
+          new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
+        ),
+      })
+      .orderBy('stockCode.updatedAt', 'ASC')
+      .limit(100)
+      .getMany();
+
+    if (!stockCodes.length) {
+      this.logger.verbose(
+        `No stocks to update at ${new Intl.DateTimeFormat(
+          'pt-BR',
+          DATE_OPTIONS as any,
+        ).format(new Date())} `,
+      );
+      return [];
+    }
+
+    const stocksDividends = await Promise.all(
+      stockCodes.map(async ({ code, stock }) => {
+        const stockDotSa = code + '.SA';
+
+        const yahooStockDividends = await this.yahooCrawlerProvider
+          .getStockDividends(stockDotSa)
+          .catch((error) => {
+            // If the error is 404 it means that the stock code is not valid
+            if (error.message.includes('404')) {
+              this.logger.warn(
+                `Stock code ${stockDotSa} is not valid. Removing from the database`,
+              );
+              this.stockCodeModelDB.delete({ code: stockDotSa });
+            }
+          });
+
+        if (!yahooStockDividends) return [];
+
+        const yahooStockDividendsSaved =
+          await this.yahooDividendHistoryModelDB.upsert(
+            yahooStockDividends.map((stockDividend) => ({
+              ...stockDividend,
+              stock,
+            })),
+            ['date', 'stock.id'],
+          );
+
+        return yahooStockDividendsSaved;
+      }),
+    );
+
+    // Log how many stocks were update
+    this.logger.verbose(
+      `Updated ${stockCodes.length} stocks at ${new Intl.DateTimeFormat(
+        'pt-BR',
+        DATE_OPTIONS as any,
+      ).format(new Date())} `,
+    );
+
+    // Update the stock last update date
+    await Promise.all(
+      stockCodes.map(async (stock) => {
+        await this.stockCodeModelDB.update(stock.id, {
+          updatedAt: new Date(),
+        });
+      }),
+    );
+
+    return stocksDividends;
   }
 }
 

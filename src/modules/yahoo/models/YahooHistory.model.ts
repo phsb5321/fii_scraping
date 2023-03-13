@@ -1,6 +1,6 @@
-import { YahooStockHIstory } from './../../../app/entities/YahooHistory/YahooHistory.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
+import { YahooStockHIstory } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 
 @Entity({
@@ -16,11 +16,6 @@ export class YahooHistoryModelDB implements YahooStockHIstory {
   // A Many to One relationship is used here because the same stock can have multiple records in the history table
   @ManyToOne(() => StockModelDB, (stock) => stock)
   stock: StockModelDB;
-
-  @Column({
-    comment: 'Stock code in Yahoo Finance',
-  })
-  stockCode: string;
 
   @Column({
     type: 'date',

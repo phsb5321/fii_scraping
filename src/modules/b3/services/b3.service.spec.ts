@@ -22,4 +22,5 @@ describe('B3Service', () => {
     const stocks = await service.update_all_stocks();
     expect(stocks).toBeDefined();
   });
+
 });
