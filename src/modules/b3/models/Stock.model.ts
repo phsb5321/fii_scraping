@@ -150,13 +150,6 @@ export class StockModelDB implements Stock {
   code: string;
 
   @Column({
-    comment: 'Other codes of the stock',
-    type: 'simple-json',
-    nullable: true,
-  })
-  otherCodes: { code: string; isin: string }[];
-
-  @Column({
     comment: 'Flag indicating if the stock has emissions',
     nullable: true,
   })

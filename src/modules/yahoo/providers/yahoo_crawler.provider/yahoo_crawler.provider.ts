@@ -1,40 +1,59 @@
 import axios from 'axios';
 
-import { Injectable } from '@nestjs/common';
+import {
+  YahooStockHIstoryI,
+  YahooStockHIstory,
+} from '@/app/entities/YahooHistory/YahooHistory.entity';
 
-export interface StockYahooI {
-  // Make the headers camelCase
-  date: Date;
-  open: string;
-  high: string;
-  low: string;
-  close: string;
-  adjClose: string;
-  volume: string;
-}
+import {
+  YahooDividend,
+  YahooDividendI,
+} from '@/app/entities/Dividend/Dividend.entity';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class YahooCrawlerProvider {
   baseUrl = 'https://query1.finance.yahoo.com/v7/finance/download/';
-  defaultConfigs =
-    'period1=1646427000&period2=1677963000&interval=1d&events=history&includeAdjustedClose=true';
+  historyConfigs =
+    '?period1=1646427000&period2=1677963000&interval=1d&events=history&includeAdjustedClose=true';
+  dividendConfigs =
+    '?period1=946857600&period2=1678579200&interval=1d&events=div&includeAdjustedClose=true';
 
-  async getStock(stockCode: string): Promise<StockYahooI[]> {
-    const { data } = await axios.get(
-      `${this.baseUrl}${stockCode}?${this.defaultConfigs}`,
-    );
+  async getStockTradeHistory(stockCode: string): Promise<YahooStockHIstoryI[]> {
+    const { data } = await axios
+      .get(`${this.baseUrl}${stockCode}${this.historyConfigs}`)
+      .catch((error) => {
+        throw new Error(
+          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.historyConfigs}`,
+        );
+      });
 
     // Parse data to JSON
     const parsedData = this.parseCSV(data);
 
     // Now, format the Date key to a Date object
-    const formattedData: StockYahooI[] = parsedData.map((item) => {
-      const [year, month, day] = item.date.split(/[-/]/);
-      const yahooStock: StockYahooI = {
-        ...item,
-        date: new Date(+year, +month - 1, +day),
-      } as StockYahooI;
-      return yahooStock;
+    const formattedData: YahooStockHIstoryI[] = parsedData.map((item) => {
+      return YahooStockHIstory.fromAbstract(item);
+    });
+
+    return formattedData;
+  }
+
+  async getStockDividends(stockCode: string): Promise<YahooDividendI[]> {
+    const { data } = await axios
+      .get(`${this.baseUrl}${stockCode}${this.dividendConfigs}`)
+      .catch((error) => {
+        throw new Error(
+          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.dividendConfigs}`,
+        );
+      });
+
+    // Parse data to JSON
+    const parsedData = this.parseCSV(data);
+
+    // Now, format the Date key to a Date object
+    const formattedData: YahooDividendI[] = parsedData.map((item) => {
+      return YahooDividend.fromAbstract(item);
     });
 
     return formattedData;

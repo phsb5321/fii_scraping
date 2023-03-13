@@ -1,3 +1,4 @@
+import { StockCodeModelDB } from '@/modules/b3/models/StockCode.model';
 import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
@@ -9,7 +10,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([B3HistoryModelDB, FiiModelDB, StockModelDB]),
+    TypeOrmModule.forFeature([
+      B3HistoryModelDB,
+      FiiModelDB,
+      StockModelDB,
+      StockCodeModelDB,
+    ]),
   ],
   providers: [
     // B3History

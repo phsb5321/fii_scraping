@@ -1,11 +1,12 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
+import { YahooStockHIstory } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 
 @Entity({
   name: 'yahoo_history',
 })
-export class YahooHistoryModelDB {
+export class YahooHistoryModelDB implements YahooStockHIstory {
   @PrimaryGeneratedColumn({
     type: 'int',
     comment: 'Unique identifier of the record',
@@ -23,38 +24,56 @@ export class YahooHistoryModelDB {
   date: Date;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Opening price',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   open: number;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Highest price',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   high: number;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Lowest price',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   low: number;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Closing price',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   close: number;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Adjusted closing price',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   adjClose: number;
 
   @Column({
-    type: 'decimal',
+    nullable: true,
     comment: 'Volume',
+    type: 'decimal',
+    precision: 15,
+    scale: 5,
   })
   volume: number;
 

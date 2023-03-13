@@ -57,16 +57,12 @@ export class Stock implements StockI {
   describleCategoryBVMF?: string;
 
   public static fromAbstract(object: { [key: string]: any }): Stock {
-    const [day, month, year] = object.dateListing.split('/');
+    const [day, month, year] = object.dateListing?.split('/');
     const stock: StockI = {
       ...object,
       dateListing: new Date(+year, +month - 1, +day),
       type: Number(object.type),
       marketIndicator: Number(object.marketIndicator),
-      hasQuotation: object.hasQuotation === 'true',
-      hasEmissions: object.hasEmissions === 'true',
-      hasBDR: object.hasBDR === 'true',
-      otherCodes: JSON.parse(object.otherCodes),
     } as StockI;
 
     return new Stock(stock);

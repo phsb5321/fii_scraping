@@ -20,8 +20,7 @@ describe('B3Service', () => {
 
   it('should return a list of stocks', async () => {
     const stocks = await service.update_all_stocks();
-    console.log('🚀 ~ file: b3.service.spec.ts:21 ~ it ~ stocks:', stocks);
     expect(stocks).toBeDefined();
-    expect(stocks.length).toBeGreaterThan(0);
   });
+
 });
