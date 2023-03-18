@@ -1,35 +1,55 @@
+# Docker Compose file for running an application stack with Nest.js, MySQL, and Redis
 version: '3.8'
 
 services:
+  # Nest.js application service
   app:
-    image: node:19
-    working_dir: /app
-    container_name: nestjs
+    image: node:19 # Use Node.js 19 as the base image
+    working_dir: /app # Set the working directory inside the container
+    container_name: nestjs # Name of the container
     volumes:
-      - .:/app
+      - .:/app # Mount the current directory on the host to /app in the container
     ports:
-      - 3000:3000
-    # Install run npm install
-    command: sh -c "npm install && npm run start:dev"
+      - 3000:3000 # Map the host port 3000 to the container port 3000
+    command: sh -c "npm install && npm run start:dev" # Install dependencies and start the app in development mode
     depends_on:
-      - db
+      - db # Ensure the db service is started before the app service
     networks:
-      - db
+      - db # Connect the app service to the db network
 
+  # MySQL database service
   db:
-    image: mysql
-    container_name: mysql
-    # NOTE: use of "mysql_native_password" is not recommended: https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password
-    # (this is just an example, not intended to be a production configuration)
-    command: --default-authentication-plugin=mysql_native_password
-    restart: 'no' # The option are: "no", "always", "on-failure", "unless-stopped"
+    image: mysql # Use the MySQL image
+    container_name: mysql # Name of the container
+    command: --default-authentication-plugin=mysql_native_password # Set the default authentication plugin (not recommended for production)
+    restart: 'on-failure' # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
     environment:
-      MYSQL_ROOT_PASSWORD: example
+      MYSQL_ROOT_PASSWORD: example # Set the MySQL root password
     ports:
-      - 3306:3306
+      - 3306:3306 # Map the host port 3306 to the container port 3306
     networks:
-      - db
+      - db # Connect the db service to the db network
 
+  # Redis cache service
+  cache:
+    image: redis/redis-stack:latest # Use the Redis image
+    container_name: redis # Name of the container
+    restart: 'on-failure' # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
+    ports:
+      - '6379:6379' # Map the host port 6379 to the container port 6379
+      - '8001:8001' # Map the host port 8001 to the container port 8001
+    command: redis-server --requirepass example # Set the Redis password
+    volumes:
+      - cache:/data # Mount the named volume "cache" to /data in the container
+    networks:
+      - db # Connect the cache service to the db network
+
+# Networks used in the services
 networks:
   db:
-    driver: bridge
+    driver: bridge # Use the bridge network driver for the db network
+
+# Volumes used in the services
+volumes:
+  cache:
+    driver: local # Use the local volume driver for the cache volume

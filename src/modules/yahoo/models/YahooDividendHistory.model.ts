@@ -28,7 +28,7 @@ export class YahooDividendHistoryModelDB implements YahooDividend {
     precision: 15,
     scale: 5,
   })
-  dividends: number;
+  dividend: number;
 
   @Column({
     type: 'timestamp',

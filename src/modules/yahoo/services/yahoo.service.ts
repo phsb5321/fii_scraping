@@ -61,20 +61,20 @@ export class YahooService {
     private yahooCrawlerProvider: YahooCrawlerProvider,
   ) { }
 
-  // @Cron(CRON_TIME_EVERY_10_SECONDS)
+  // @Cron(CRON_TIME_EVERY_MINUTE)
   @LogMethod(new Logger(YahooService.name))
   async updateStocksHistory() {
     // Rewrite the code above to make a left join with the stock table
     const stockCodes = await this.stockCodeModelDB
       .createQueryBuilder('stockCode')
       .leftJoinAndSelect('stockCode.stock', 'stock')
-      .where('stockCode.updatedAt < :updatedAt', {
-        updatedAt: new Date(
-          new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
-        ),
-      })
+      // .where('stockCode.updatedAt < :updatedAt', {
+      //   updatedAt: new Date(
+      //     new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
+      //   ),
+      // })
       .orderBy('stockCode.updatedAt', 'ASC')
-      .limit(100)
+      .limit(30)
       .getMany();
 
     if (!stockCodes.length) {
@@ -91,7 +91,7 @@ export class YahooService {
       stockCodes.map(async ({ code, stock }) => {
         const stockDotSa = code + '.SA';
 
-        const yahooStockHistory = await this.yahooCrawlerProvider
+        const yahooStockHistory = (await this.yahooCrawlerProvider
           .getStockTradeHistory(stockDotSa)
           .catch((error) => {
             // If the error is 404 it means that the stock code is not valid
@@ -101,9 +101,30 @@ export class YahooService {
               );
               this.stockCodeModelDB.delete({ code: stockDotSa });
             }
-          });
+          })) as YahooHistoryModelDB[];
 
         if (!yahooStockHistory) return [];
+
+        // Log the length of the stock history
+        this.logger.verbose(
+          `Stock ${stockDotSa} has ${yahooStockHistory.length} days of history`,
+        );
+
+        // Print the oldest date in the stock history, sot by date
+        // Sort by date
+        yahooStockHistory.sort((a, b) => {
+          if (a.date > b.date) return 1;
+          if (a.date < b.date) return -1;
+          return 0;
+        });
+
+        // Log the oldest date in the stock history
+        this.logger.verbose(
+          `Oldest date in the stock history of ${stockDotSa} is ${new Intl.DateTimeFormat(
+            'pt-BR',
+            DATE_OPTIONS as any,
+          ).format(yahooStockHistory[0].date)}`,
+        );
 
         const yahooStockHistorySaved = await this.yahooHistoryModelDB.upsert(
           yahooStockHistory.map((stockHistory) => ({
@@ -139,15 +160,15 @@ export class YahooService {
 
   // @Cron(CRON_TIME_EVERY_10_SECONDS)
   @LogMethod(new Logger(YahooService.name))
-  async updateStocksDividends() {
+  async updateStocksdividend() {
     const stockCodes = await this.stockCodeModelDB
       .createQueryBuilder('stockCode')
       .leftJoinAndSelect('stockCode.stock', 'stock')
-      .where('stockCode.updatedAt < :updatedAt', {
-        updatedAt: new Date(
-          new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
-        ),
-      })
+      // .where('stockCode.updatedAt < :updatedAt', {
+      //   updatedAt: new Date(
+      //     new Date().getTime() - 24 * 60 * 60 * 1000 /* 24 hours */,
+      //   ),
+      // })
       .orderBy('stockCode.updatedAt', 'ASC')
       .limit(100)
       .getMany();
@@ -162,12 +183,12 @@ export class YahooService {
       return [];
     }
 
-    const stocksDividends = await Promise.all(
+    const stocksdividend = await Promise.all(
       stockCodes.map(async ({ code, stock }) => {
         const stockDotSa = code + '.SA';
 
-        const yahooStockDividends = await this.yahooCrawlerProvider
-          .getStockDividends(stockDotSa)
+        const yahooStockdividend = await this.yahooCrawlerProvider
+          .getStockdividend(stockDotSa)
           .catch((error) => {
             // If the error is 404 it means that the stock code is not valid
             if (error.message.includes('404')) {
@@ -178,18 +199,18 @@ export class YahooService {
             }
           });
 
-        if (!yahooStockDividends) return [];
+        if (!yahooStockdividend) return [];
 
-        const yahooStockDividendsSaved =
+        const yahooStockdividendSaved =
           await this.yahooDividendHistoryModelDB.upsert(
-            yahooStockDividends.map((stockDividend) => ({
+            yahooStockdividend.map((stockDividend) => ({
               ...stockDividend,
               stock,
             })),
             ['date', 'stock.id'],
           );
 
-        return yahooStockDividendsSaved;
+        return yahooStockdividendSaved;
       }),
     );
 
@@ -210,7 +231,7 @@ export class YahooService {
       }),
     );
 
-    return stocksDividends;
+    return stocksdividend;
   }
 }
 
