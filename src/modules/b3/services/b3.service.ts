@@ -1,245 +1,112 @@
-import { LessThan, Repository } from 'typeorm';
+// Libs
+import { Job, Queue } from 'bull';
 
-import { StockI } from '@/app/entities/Stock/Stock.entity';
-import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';
+// Cron Configs
+import { CRON_TIME_EVERY_5_MINUTES } from '@/app/utils/CronConfigs';
+
+// Logger
+import LogMethod from '@/app/utils/LogMethod';
+
+// Database Models
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { StockCodeModelDB } from '@/modules/b3/models/StockCode.model';
-import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
-import { B3ScrapperProvider } from '@/modules/b3/providers/b3_scrapper.provider/b3_scrapper.provider';
-import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
+
+// Services
+import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
+import { ScrapeB3HistoryService } from '@/modules/b3/usecases/scrape-b3-history/scrape-b3-history.service';
+import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
+
+// Nest Modules
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
 
-// *    *    *    *    *    *
-// -    -    -    -    -    -
-// |    |    |    |    |    |
-// |    |    |    |    |    +----- day of the week (0 - 6) (Sunday = 0)
-// |    |    |    |    +------- month (1 - 12)
-// |    |    |    +--------- day of the month (1 - 31)
-// |    |    +----------- hour (0 - 23)
-// |    +------------- min (0 - 59)
-// +--------------- second (0 - 59) (optional)
-
-const CRON_TIME_EVERY_5_SECONDS = '*/5 * * * * *';
-const CRON_TIME_EVERY_10_SECONDS = '*/10 * * * * *';
-
-const CRON_TIME_EVERY_MINUTE = '*/1 * * * *';
-const CRON_TIME_EVERY_2_MINUTES = '*/2 * * * *';
-const CRON_TIME_EVERY_5_MINUTES = '*/5 * * * *';
-const CRON_RUN_EVERY_10_MINUTES = '*/10 * * * *';
-const CRON_TIME_EVERY_2_HOURS = '0 */2 * * *';
-const CRON_TIME_EVERY_DAY_AT_8AM = '0 8 * * *';
-const CRON_TIME_EVERY_HOUR = '0 * * * *';
-
+/**
+ * The B3Service class is responsible for managing and processing stock data,
+ * including scraping stocks, updating stock information, and processing historical stock data.
+ *
+ * The class uses NestJS modules, including the '@nestjs/bull' package for queue processing
+ * and the '@nestjs/schedule' package for scheduling tasks.
+ */
 @Injectable()
+@Processor('stocks-queue')
 export class B3Service {
-  private readonly logger = new Logger(B3Service.name);
+  logger = new Logger(B3Service.name);
 
   constructor(
-    @InjectRepository(B3HistoryModelDB)
-    private fiiB3HistoryModelDB: Repository<B3HistoryModelDB>,
+    // Services
+    @Inject(ScrapeAllStocksService)
+    private scrapeAllStocksService: ScrapeAllStocksService,
 
-    @InjectRepository(FiiModelDB)
-    private fiiModelRepository: Repository<FiiModelDB>,
+    @Inject(UpdateAllStockService)
+    private updateAllStockService: UpdateAllStockService,
 
-    @InjectRepository(StockModelDB)
-    private stockModelRepository: Repository<StockModelDB>,
+    @Inject(ScrapeB3HistoryService)
+    private scrapeB3HistoryService: ScrapeB3HistoryService,
 
-    @InjectRepository(StockCodeModelDB)
-    private stockCodeModelRepository: Repository<StockCodeModelDB>,
-
-    @Inject(B3ScrapperProvider)
-    private b3Scrapper: B3ScrapperProvider,
-
-    @Inject(B3CrawlerProvider)
-    private b3Crawler: B3CrawlerProvider,
+    // Queues
+    @InjectQueue('stocks-queue')
+    private stocksQueue: Queue,
   ) { }
 
-  @Cron(CRON_TIME_EVERY_5_MINUTES)
+  /**
+   * Periodically scrapes all stocks and adds them to the stocks queue for further processing.
+   * This method is scheduled to run every 5 minutes.
+   *
+   * @returns {Promise<StockModelDB[]>} The list of newly scraped stocks.
+   */
+  // @Cron(CRON_TIME_EVERY_5_MINUTES)
   @LogMethod(new Logger(B3Service.name))
-  async scrape_all_stocks() {
-    const stocks: StockI[] = await this.b3Crawler.getStocks();
+  async scrape_all_stocks(): Promise<StockModelDB[]> {
+    // Execute the ScrapeAllStocksService to get the list of scraped stocks
+    const scrapedStocks = await this.scrapeAllStocksService.execute();
 
-    if (!stocks || stocks.length === 0) {
-      this.logger.verbose('No new stocks found');
-      return;
-    }
+    const stockIdList = scrapedStocks
+      .filter((stock) => stock.id)
+      .map((stock) => stock.id);
 
-    let newStocksCount = 0;
+    this.stocksQueue.add(`scrape_details`, stockIdList);
+    this.logger.verbose(`Added ${scrapedStocks.length} stocks`);
 
-    const newStocks = await Promise.all(
-      stocks.map(async (stock) => {
-        // Search for an existing stock
-        const existingStock = await this.stockModelRepository.findOne({
-          where: { issuingCompany: stock.issuingCompany },
-        });
-
-        // If the stock already exists, skip it
-        if (existingStock) return;
-
-        // Create a new stock
-        const newStock = await this.stockModelRepository.create(stock);
-        newStocksCount++;
-
-        return await this.stockModelRepository.save(newStock);
-      }),
-    );
-
-    // Log the number of new stocks found
-    this.logger.verbose(`Found ${newStocksCount} new stocks`);
-
-    return newStocks;
+    // Return the list of scraped stocks
+    return scrapedStocks;
   }
 
-  @Cron(CRON_TIME_EVERY_5_MINUTES)
+  /**
+   * Processes the 'scrape_details' job by updating all stocks with their latest information.
+   *
+   * @param {Job<number[]>} job - The job containing an array of stock IDs to be updated.
+   * @returns {Promise<StockModelDB[]>} - A promise that resolves when the stocks have been updated.
+   */
+  @Process('scrape_details')
   @LogMethod(new Logger(B3Service.name))
-  async update_all_stocks() {
-    // Find all stocks in the database and order them by their update date
-    const stocks: StockI[] = await this.stockModelRepository.find({
-      order: { updatedAt: 'ASC' },
-      take: 1000,
-    });
-
-    // Initialize a count for updated stocks
-    let updatedStocksCount = 0;
-
-    // Use a web crawler to get the details of each stock
-    const stockDetails = await Promise.all(
-      await this.b3Crawler.getStockDetails(
-        stocks.map((stock) => stock.codeCVM),
-      ),
+  async scrape_all_stocks_details(job: Job<number[]>): Promise<StockModelDB[]> {
+    const stockIdList = job.data;
+    const scrapedStocksDetails = await this.updateAllStockService.execute(
+      stockIdList,
     );
 
-    // Update the details of each stock
-    const updatedStocks = await Promise.all(
-      stockDetails.map(async (stockDetail, index) => {
-        // Save the updated details to the database
-        const response = await this.stockModelRepository.save({
-          ...stocks[index],
-          ...stockDetail,
-          updatedAt: new Date(),
-        });
+    if (!scrapedStocksDetails || scrapedStocksDetails.length === 0) return [];
 
-        // Save any new other codes to the database
-        const { otherCodes } = stockDetail;
+    this.logger.verbose(`Scraped ${scrapedStocksDetails.length} stocks`);
 
-        if (!otherCodes || otherCodes.length === 0) return response;
+    const stockIdListDetails = scrapedStocksDetails
+      .filter((stock) => stock.id !== null)
+      .map((stock) => stock.id);
 
-        const otherCodesList = await Promise.all(
-          otherCodes.map(async (otherCode) => {
-            const existingStockCode =
-              await this.stockCodeModelRepository.findOne({
-                where: { code: otherCode.code },
-              });
+    this.stocksQueue.add(`scrape_yahoo_history`, stockIdListDetails);
+    this.stocksQueue.add(`scrape_yahoo_dividends`, stockIdListDetails);
+    this.logger.verbose(`Added ${scrapedStocksDetails.length} stocks `);
 
-            // If the other code already exists in the database, skip it
-            if (existingStockCode) return;
-
-            // Save the new other code to the database
-            const newStockCode = await this.stockCodeModelRepository.create({
-              stock: stocks[index],
-              ...otherCode,
-            });
-
-            return await this.stockCodeModelRepository.save(newStockCode);
-          }),
-        );
-
-        return response as StockI;
-      }),
-    );
-
-    // Increment the count of updated stocks
-    updatedStocksCount += updatedStocks.length;
-
-    // Log the number of stocks updated
-    this.logger.verbose(`Updated ${updatedStocksCount} stocks`);
+    return scrapedStocksDetails;
   }
 
-  // @Cron(CRON_TIME_EVERY_MINUTE)
-  async scrape_b3_history() {
-    const dictionary = {
-      especif: 'especificacao_papel',
-      n_negocios: 'numero_negocios',
-      part: 'participacao_papel',
-      quantidade: 'quantidade_total_titulos',
-      volume: 'volume_total_titulos',
-      aber: 'preco_abertura',
-      min: 'preco_minimo',
-      max: 'preco_maximo',
-      med: 'preco_medio',
-      fech: 'preco_fechamento',
-    };
-
-    const funds = await this.fiiModelRepository.find();
-
-    // Log the number of funds found
-    this.logger.verbose(`Found ${funds.length} funds`);
-
-    await Promise.all(
-      funds.map(async (fii) => {
-        const { data, errors } = await this.b3Scrapper.getFiiHistory(
-          fii.codigo_do_fundo,
-        );
-
-        // For each data entry, create a new B3HistoryModelDB
-        await Promise.all(
-          data.map(async (entry) => {
-            // Search for an existing entry
-            const existingEntry = await this.fiiB3HistoryModelDB.findOne({
-              where: {
-                fii: { codigo_do_fundo: fii.codigo_do_fundo },
-                pregao_date: entry[dictionary['pregao_date']] as Date,
-              },
-            });
-
-            // If the entry already exists, skip it
-            if (existingEntry) return;
-
-            // Create a new entry
-            const newEntry = new B3HistoryModelDB();
-
-            //   Use the dictionary to map the data to the B3HistoryModelDB
-            Object.keys(dictionary).forEach((key) => {
-              newEntry[dictionary[key]] = entry[key];
-            });
-
-            // Set the fii and save the entry
-            newEntry.fii = fii;
-
-            await this.fiiB3HistoryModelDB.save({
-              ...newEntry,
-              fii: { codigo_do_fundo: fii.codigo_do_fundo },
-              pregao_date: entry[dictionary['pregao_date']] as Date,
-            });
-          }),
-        );
-      }),
-    );
+  /**
+   * Scrapes historical stock data from the B3 website.
+   * This method is currently commented out and not scheduled to run.
+   *
+   * @returns {Promise<void>} A promise that resolves when the historical stock data has been scraped.
+   */
+  async scrape_b3_history(): Promise<void> {
+    return this.scrapeB3HistoryService.execute();
   }
-}
-
-export function LogMethod(logger: Logger) {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
-    const originalMethod = descriptor.value;
-    descriptor.value = async function (...args: any[]) {
-      const logMessage = `Method ${propertyKey} called at ${new Intl.DateTimeFormat(
-        'pt-BR',
-        {
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: 'numeric',
-          second: 'numeric',
-          timeZone: 'America/Sao_Paulo',
-        },
-      ).format(new Date())}`;
-      logger.verbose(logMessage);
-      const result = await originalMethod.apply(this, args);
-      return result;
-    };
-    return descriptor;
-  };
 }
