@@ -42,37 +42,18 @@ export class ScrapeAllStocksService {
     // Fetch the list of stocks from the B3 Crawler
     const stocks: StockI[] = await this.b3Crawler.getStocks();
 
-    // If no new stocks are found, log the message and return an empty array
-    if (!stocks || stocks.length === 0) {
-      this.logger.verbose('No new stocks found');
-      return [];
-    }
-
-    // Initialize the count of new stocks added to the database
-    let newStocksCount = 0;
-
     // Process each stock in the list and add new stocks to the database
-    const newStocks = await Promise.all(
-      stocks.map(async (stock) => {
-        // Search for an existing stock in the database by issuing company
-        const existingStock = await this.stockModelRepository.findOne({
-          where: { issuingCompany: stock.issuingCompany },
-        });
+    let newStocks = await this.stockModelRepository
+      .upsert(stocks, ['tradingName'])
+      .then((result) => {
+        // Return the list of new stocks added to the database
+        return result.generatedMaps as StockModelDB[];
+      });
 
-        // If the stock already exists, skip it
-        if (existingStock) return;
-
-        // Create a new stock record in the database
-        const newStock = await this.stockModelRepository.create(stock);
-        newStocksCount++; // Increment the count of new stocks
-
-        // Save the new stock record to the database
-        return await this.stockModelRepository.save(newStock);
-      }),
-    );
+    newStocks = newStocks.filter((stock) => stock !== undefined);
 
     // Log the number of new stocks added to the database
-    this.logger.verbose(`Found ${newStocksCount} new stocks`);
+    this.logger.verbose(`Found ${newStocks.length} new stocks`);
 
     // Return the list of new stocks added to the database
     return newStocks;

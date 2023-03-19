@@ -20,6 +20,7 @@ import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { B3ControllerController } from './controllers/b3-controller/b3-controller.controller';
 
 @Module({
   imports: [
@@ -49,5 +50,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     UpdateAllStockService,
     ScrapeB3HistoryService,
   ],
+  controllers: [B3ControllerController],
 })
 export class B3HistoryModule { }

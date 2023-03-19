@@ -13,6 +13,7 @@ export const CRON_TIME_EVERY_10_SECONDS = '*/10 * * * * *';
 
 export const CRON_TIME_EVERY_MINUTE = '*/1 * * * *';
 export const CRON_TIME_EVERY_2_MINUTES = '*/2 * * * *';
+export const CRON_TIME_EVERY_3_MINUTES = '*/3 * * * *';
 export const CRON_TIME_EVERY_5_MINUTES = '*/5 * * * *';
 export const CRON_RUN_EVERY_10_MINUTES = '*/10 * * * *';
 export const CRON_TIME_EVERY_2_HOURS = '0 */2 * * *';

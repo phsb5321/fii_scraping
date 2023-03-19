@@ -1,7 +1,8 @@
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { StockI } from '@/app/entities/Stock/Stock.entity';
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
+import { StockCodeModelDB } from '@/modules/b3/models/StockCode.model';
 import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,6 +26,9 @@ export class UpdateAllStockService {
     @InjectRepository(StockModelDB)
     private stockModelRepository: Repository<StockModelDB>,
 
+    @InjectRepository(StockCodeModelDB)
+    private stockCodeModelRepository: Repository<StockCodeModelDB>,
+
     // Providers
     @Inject(B3CrawlerProvider)
     private b3Crawler: B3CrawlerProvider,
@@ -36,12 +40,18 @@ export class UpdateAllStockService {
    *
    * @returns {Promise<StockModelDB[]>} A promise that resolves to an array of updated StockModelDB instances.
    */
-  async execute(): Promise<StockModelDB[]> {
-    // Find all stocks in the database and order them by their update date
+  async execute(stockIdList?: number[]): Promise<StockModelDB[]> {
+    // Search stockIdList in the database
     const stocks: StockI[] = await this.stockModelRepository.find({
-      order: { updatedAt: 'ASC' },
-      take: 1000,
+      where: stockIdList ? { id: In(stockIdList) } : {},
     });
+
+    if (!stocks || stocks.length === 0) {
+      this.logger.verbose('No stocks found');
+      return [];
+    }
+
+    this.logger.verbose(`About to update ${stocks.length} stocks`);
 
     // Initialize a count for updated stocks
     let updatedStocksCount = 0;
@@ -63,20 +73,26 @@ export class UpdateAllStockService {
           updatedAt: new Date(),
         });
 
+        // Increment the count of updated stocks
+        updatedStocksCount++;
+
         // Save any new other codes to the database
         const { otherCodes } = stockDetail;
 
         if (!otherCodes || otherCodes.length === 0) return response;
 
-        return response as StockModelDB;
+        const otherCodesList = await this.stockCodeModelRepository
+          .upsert({ ...otherCodes, stock: { id: response.id } }, ['code'])
+          .then((result) => result.generatedMaps);
+
+        response.otherCodes = otherCodesList;
+
+        return response;
       }),
     );
 
-    // Increment the count of updated stocks
-    updatedStocksCount += updatedStocks.length;
-
-    // Log the number of stocks updated
-    this.logger.verbose(`Updated ${updatedStocksCount} stocks`);
+    // Log the number of updated stocks
+    this.logger.log(`Updated ${updatedStocksCount} stock(s) in the database.`);
 
     return updatedStocks;
   }
