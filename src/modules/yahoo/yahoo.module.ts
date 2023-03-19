@@ -6,6 +6,8 @@ import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.pr
 import { YahooService } from '@/modules/yahoo/services/yahoo.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UpdateYahooStockHistoryService } from './usecases/update-yahoo-stock-history/update-yahoo-stock-history.service';
+import { UpdateYahooStockDividendsService } from './usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service';
 
 @Module({
   imports: [
@@ -22,6 +24,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
     // YahooCrawlerProvider,
     YahooCrawlerProvider,
+
+    UpdateYahooStockHistoryService,
+
+    UpdateYahooStockDividendsService,
   ],
 })
 export class YahooModule { }

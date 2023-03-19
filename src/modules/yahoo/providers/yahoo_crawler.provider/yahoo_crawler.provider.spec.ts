@@ -45,10 +45,10 @@ describe('YahooCrawlerProvider', () => {
     expect(keys).toEqual(entityKeys);
   });
 
-  // Test getStockDividends
+  // Test getStockdividend
   it('should return a stock', async () => {
     const stockCode = 'PETR4.SA';
-    const stock = await provider.getStockDividends(stockCode);
+    const stock = await provider.getStockdividend(stockCode);
     console.log("🚀 ~ file: yahoo_crawler.provider.spec.ts:52 ~ it ~ stock:", stock)
     expect(stock).toBeDefined();
   });
@@ -56,7 +56,7 @@ describe('YahooCrawlerProvider', () => {
   it('should return a stock with the correct keys', async () => {
     // Get the stock
     const stockCode = 'BBAS3.SA';
-    const stock = await provider.getStockDividends(stockCode);
+    const stock = await provider.getStockdividend(stockCode);
 
     // Get the keys
     const keys = Object.keys(stock[0]);
