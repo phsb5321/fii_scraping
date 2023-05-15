@@ -14,14 +14,16 @@ import { B3Service } from '@/modules/b3/services/b3.service';
 import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
 import { ScrapeB3HistoryService } from '@/modules/b3/usecases/scrape-b3-history/scrape-b3-history.service';
 import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
+import { ListAllStocksService } from '@/modules/b3/usecases/list-all-stocks/list-all-stocks.service';
 
 // Libs
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { B3ControllerController } from './controllers/b3-controller/b3-controller.controller';
 
+// Controllers
+import { B3ControllerController } from '@/modules/b3/controllers/b3-controller/b3-controller.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -49,7 +51,8 @@ import { B3ControllerController } from './controllers/b3-controller/b3-controlle
     ScrapeAllStocksService,
     UpdateAllStockService,
     ScrapeB3HistoryService,
+    ListAllStocksService,
   ],
   controllers: [B3ControllerController],
 })
-export class B3HistoryModule { }
+export class B3HistoryModule {}

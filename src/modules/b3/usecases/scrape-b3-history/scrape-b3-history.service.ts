@@ -1,3 +1,5 @@
+// src/modules/b3/usecases/scrape-b3-history/scrape-b3-history.service.ts
+
 import { Repository } from 'typeorm';
 
 import { B3HistoryModelDB } from '@/modules/b3/models/B3History.model';

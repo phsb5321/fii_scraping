@@ -1,3 +1,5 @@
+// src/modules/b3/controllers/b3-controller/b3-controller.controller.ts
+
 import { B3Service } from '@/modules/b3/services/b3.service';
 import { Controller, Inject, Get } from '@nestjs/common';
 
@@ -11,5 +13,10 @@ export class B3ControllerController {
   @Get()
   async generate_stock_queue() {
     return this.b3Service.scrape_all_stocks();
+  }
+
+  @Get('jobs')
+  async create_jobs_for_all_stocks() {
+    return this.b3Service.create_jobs_for_all_stocks();
   }
 }

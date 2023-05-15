@@ -6,12 +6,19 @@ import { ModulesModule } from '@/modules/modules.module';
 import { BullModule } from '@nestjs/bull';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 // Define the main application module
 @Module({
   imports: [
+    // Import the Nest.js devtools module for debugging
+    DevtoolsModule.register({
+      http: process.env.NODE_ENV !== 'production',
+      port: 3500,
+    }),
+
     // Import the Nest.js scheduler module for handling scheduled tasks
     ScheduleModule.forRoot(),
 
@@ -56,4 +63,4 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   ],
 })
 // Export the main application module
-export class AppModule { }
+export class AppModule {}

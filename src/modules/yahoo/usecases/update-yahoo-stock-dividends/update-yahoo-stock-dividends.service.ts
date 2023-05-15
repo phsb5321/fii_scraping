@@ -1,3 +1,5 @@
+// src/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service.ts
+
 import { In, Repository } from 'typeorm';
 
 import { YahooDividendHistoryModelDB } from '@/modules/yahoo/models/YahooDividendHistory.model';
@@ -19,13 +21,13 @@ export class UpdateYahooStockDividendsService {
 
     @Inject(YahooCrawlerProvider)
     private yahooCrawlerProvider: YahooCrawlerProvider,
-  ) { }
+  ) {}
 
   async execute(
-    stockIdList?: number[],
+    stockCodeList?: number[],
   ): Promise<YahooDividendHistoryModelDB[]> {
     const stocks = await this.stockModelDB.find({
-      where: { id: In(stockIdList) },
+      where: { code: In(stockCodeList) },
     });
 
     if (!stocks.length) {
@@ -48,7 +50,9 @@ export class UpdateYahooStockDividendsService {
             'date',
           ]);
 
-        return yahooStockdividendSaved.generatedMaps as YahooDividendHistoryModelDB[];
+        return (await this.yahooDividendHistoryModelDB.save(
+          yahooStockdividendSaved.generatedMaps,
+        )) as YahooDividendHistoryModelDB[];
       }),
     );
 

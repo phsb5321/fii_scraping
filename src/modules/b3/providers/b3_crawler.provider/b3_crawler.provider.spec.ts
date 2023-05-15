@@ -29,5 +29,5 @@ describe('B3CrawlerProvider', () => {
     const stocks = await provider.getStockDetails('1023');
     const stock = stocks[0];
     expect(stock.otherCodes).toBeDefined();
-  })
+  });
 });

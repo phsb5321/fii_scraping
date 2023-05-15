@@ -1,8 +1,13 @@
+// src/modules/b3/services/b3.service.ts
+
 // Libs
 import { Job, Queue } from 'bull';
 
 // Cron Configs
-import { CRON_TIME_EVERY_5_MINUTES } from '@/app/utils/CronConfigs';
+import {
+  CRON_TIME_EVERY_5_MINUTES,
+  CRON_TIME_EVERY_5_SECONDS,
+} from '@/app/utils/CronConfigs';
 
 // Logger
 import LogMethod from '@/app/utils/LogMethod';
@@ -12,12 +17,12 @@ import { StockModelDB } from '@/modules/b3/models/Stock.model';
 
 // Services
 import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
-import { ScrapeB3HistoryService } from '@/modules/b3/usecases/scrape-b3-history/scrape-b3-history.service';
 import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
+import { ListAllStocksService } from '@/modules/b3/usecases/list-all-stocks/list-all-stocks.service';
 
 // Nest Modules
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
 /**
@@ -29,7 +34,7 @@ import { Cron } from '@nestjs/schedule';
  */
 @Injectable()
 @Processor('stocks-queue')
-export class B3Service {
+export class B3Service implements OnModuleInit {
   logger = new Logger(B3Service.name);
 
   constructor(
@@ -40,13 +45,46 @@ export class B3Service {
     @Inject(UpdateAllStockService)
     private updateAllStockService: UpdateAllStockService,
 
-    @Inject(ScrapeB3HistoryService)
-    private scrapeB3HistoryService: ScrapeB3HistoryService,
+    @Inject(ListAllStocksService)
+    private listAllStocksService: ListAllStocksService,
 
     // Queues
     @InjectQueue('stocks-queue')
     private stocksQueue: Queue,
   ) { }
+
+  async onModuleInit(): Promise<void> {
+    this.stocksQueue.pause(); // Pause the queue on initialization
+
+    // Listen to the 'global:completed' event and resume the queue
+    this.stocksQueue.on('global:completed', async () => {
+      await this.stocksQueue.resume();
+    });
+
+    // Listen to the 'global:active' event and pause the queue
+    this.stocksQueue.on('global:active', async () => {
+      await this.stocksQueue.pause();
+    });
+  }
+
+  // @Cron(CRON_TIME_EVERY_5_SECONDS)
+  async checkForJobs(): Promise<void> {
+    const jobCount = await this.stocksQueue.getJobCounts();
+
+    if (
+      jobCount.waiting > 0 ||
+      jobCount.active > 0 ||
+      jobCount.delayed > 0 ||
+      jobCount.failed > 0
+    ) {
+      const isQueuePaused = await this.stocksQueue.isPaused();
+
+      if (isQueuePaused) {
+        await this.stocksQueue.resume();
+        this.logger.verbose(`Queue resumed.`);
+      }
+    } else this.logger.verbose(`No jobs to work on.`);
+  }
 
   /**
    * Periodically scrapes all stocks and adds them to the stocks queue for further processing.
@@ -80,33 +118,47 @@ export class B3Service {
   @Process('scrape_details')
   @LogMethod(new Logger(B3Service.name))
   async scrape_all_stocks_details(job: Job<number[]>): Promise<StockModelDB[]> {
-    const stockIdList = job.data;
-    const scrapedStocksDetails = await this.updateAllStockService.execute(
-      stockIdList,
-    );
+    try {
+      const scrapedStocksDetails = await this.updateAllStockService.execute();
+      this.logger.verbose(
+        `Scraping details for ${scrapedStocksDetails.length} stocks`,
+      );
 
-    if (!scrapedStocksDetails || scrapedStocksDetails.length === 0) return [];
+      if (!scrapedStocksDetails || scrapedStocksDetails.length === 0) return [];
 
-    this.logger.verbose(`Scraped ${scrapedStocksDetails.length} stocks`);
+      const stockCodeList = scrapedStocksDetails
+        .map((stock) => stock.code)
+        .filter((code) => code);
 
-    const stockIdListDetails = scrapedStocksDetails
-      .filter((stock) => stock.id !== null)
-      .map((stock) => stock.id);
+      await Promise.all(
+        stockCodeList.map(async (stockCode) => {
+          this.stocksQueue.add(`scrape_yahoo_history_and_dividends`, stockCode);
+        }),
+      );
 
-    this.stocksQueue.add(`scrape_yahoo_history`, stockIdListDetails);
-    this.stocksQueue.add(`scrape_yahoo_dividends`, stockIdListDetails);
-    this.logger.verbose(`Added ${scrapedStocksDetails.length} stocks `);
+      this.logger.verbose(`Added ${scrapedStocksDetails.length} stocks `);
 
-    return scrapedStocksDetails;
+      return scrapedStocksDetails;
+    } catch (error) {
+      this.logger.error(error);
+      throw { ...error, job: job.data };
+    }
   }
 
-  /**
-   * Scrapes historical stock data from the B3 website.
-   * This method is currently commented out and not scheduled to run.
-   *
-   * @returns {Promise<void>} A promise that resolves when the historical stock data has been scraped.
-   */
-  async scrape_b3_history(): Promise<void> {
-    return this.scrapeB3HistoryService.execute();
+  async create_jobs_for_all_stocks(): Promise<void> {
+    await this.stocksQueue.add(`scrape_details`);
+
+    // const stockList = await this.listAllStocksService.execute();
+    // // Filter out stocks that don't have a code
+    // const stockCodeList = stockList
+    //   .map((stock) => stock.code)
+    //   .filter((code) => code);
+
+    // await Promise.all(
+    //   stockCodeList.map(async (stockCode) => {
+    //     this.stocksQueue.add(`scrape_yahoo_history_and_dividends`, stockCode);
+    //   }),
+    // );
+    return Promise.resolve();
   }
 }

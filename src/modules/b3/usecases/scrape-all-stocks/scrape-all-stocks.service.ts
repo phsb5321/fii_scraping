@@ -1,3 +1,5 @@
+// src/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service.ts
+
 import { Repository } from 'typeorm';
 
 import { StockI } from '@/app/entities/Stock/Stock.entity';
@@ -44,7 +46,7 @@ export class ScrapeAllStocksService {
 
     // Process each stock in the list and add new stocks to the database
     let newStocks = await this.stockModelRepository
-      .upsert(stocks, ['tradingName'])
+      .upsert(stocks, ['tradingName', 'issuingCompany', 'codeCVM', 'cnpj'])
       .then((result) => {
         // Return the list of new stocks added to the database
         return result.generatedMaps as StockModelDB[];

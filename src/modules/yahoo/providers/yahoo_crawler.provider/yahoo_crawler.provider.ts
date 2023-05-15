@@ -1,8 +1,10 @@
+// src/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider.ts
+
 import axios from 'axios';
 
 import {
-  YahooStockHIstoryI,
   YahooStockHIstory,
+  YahooStockHIstoryI,
 } from '@/app/entities/YahooHistory/YahooHistory.entity';
 
 import {
@@ -35,11 +37,9 @@ export class YahooCrawlerProvider {
     const parsedData = this.parseCSV(data);
 
     // Now, format the Date key to a Date object
-    const formattedData: YahooStockHIstoryI[] = parsedData.map((item) => {
+    return parsedData.map((item) => {
       return YahooStockHIstory.fromAbstract(item);
     });
-
-    return formattedData;
   }
 
   async getStockdividend(stockCode: string): Promise<YahooDividendI[]> {
@@ -55,11 +55,9 @@ export class YahooCrawlerProvider {
     const parsedData = this.parseCSV(data);
 
     // Now, format the Date key to a Date object
-    const formattedData: YahooDividendI[] = parsedData.map((item) => {
+    return parsedData.map((item) => {
       return YahooDividend.fromAbstract(item);
     });
-
-    return formattedData;
   }
 
   private parseCSV(data: string): { [key: string]: string }[] {
@@ -81,7 +79,7 @@ export class YahooCrawlerProvider {
     });
 
     // For each line, create an object with the headers as keys
-    const result = lines.slice(1).map((line) => {
+    return lines.slice(1).map((line) => {
       const obj = {};
       const currentline = line.split(',');
 
@@ -91,7 +89,5 @@ export class YahooCrawlerProvider {
 
       return obj;
     });
-
-    return result;
   }
 }

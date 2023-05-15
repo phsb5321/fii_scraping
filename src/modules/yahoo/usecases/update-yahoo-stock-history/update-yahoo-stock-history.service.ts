@@ -1,3 +1,5 @@
+// src/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service.ts
+
 import { In, Repository } from 'typeorm';
 
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
@@ -30,13 +32,13 @@ export class UpdateYahooStockHistoryService {
 
   /**
    * Executes the service to update the stock history for the specified stocks or all stocks.
-   * @param {number[] | undefined} stockIdList - Optional array of stock IDs to update.
+   * @param {number[] | undefined} stockCodeLIst - Optional array of stock IDs to update.
    * @returns {Promise<YahooHistoryModelDB[]>} The updated stock history data.
    */
-  async execute(stockIdList: number[]): Promise<YahooHistoryModelDB[]> {
+  async execute(stockCodeLIst: number[]): Promise<YahooHistoryModelDB[]> {
     // Find stock codes for the specified stocks or all stocks
     const stocks = await this.stockModelDB.find({
-      where: { id: In(stockIdList) },
+      where: { code: In(stockCodeLIst) },
     });
 
     if (!stocks.length) {
@@ -73,7 +75,9 @@ export class UpdateYahooStockHistoryService {
           ['stockId', 'date'],
         );
 
-        return yahooStockHistorySaved.generatedMaps as YahooHistoryModelDB[];
+        return (await this.yahooHistoryModelDB.save(
+          yahooStockHistorySaved.generatedMaps,
+        )) as YahooHistoryModelDB[];
       }),
     );
 
