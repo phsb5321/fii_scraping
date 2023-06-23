@@ -12,9 +12,9 @@ export class YahooDividend implements YahooDividendI {
   }
 
   public static fromAbstract(object: { [key: string]: any }): YahooDividend {
-    const [day, month, year] = object.date?.split('/');
+    const [day, month, year] = (object.date?.split('/') ?? []);
     return new YahooDividend({
-      date: new Date(`${year}-${month}-${day}`),
+      date: year ? new Date(`${year}-${month}-${day}`) : undefined,
       dividend: object.dividend,
     });
   }

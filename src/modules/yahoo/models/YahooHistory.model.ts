@@ -13,7 +13,7 @@ export class YahooHistoryModelDB implements YahooStockHIstory {
   })
   id: number;
 
-  // A Many to One relationship is used here because the same stock can have multiple records in the history table
+  // A Many-to-One relationship is used here because the same stock can have multiple records in the history table
   @ManyToOne(() => StockModelDB, (stock) => stock)
   stock: StockModelDB;
 

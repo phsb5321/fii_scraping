@@ -17,8 +17,14 @@ export default function LogMethod(logger: Logger) {
         },
       ).format(new Date())}`;
       logger.verbose(logMessage);
-      const result = await originalMethod.apply(this, args);
-      return result;
+      // const result = await originalMethod.apply(this, args);
+      try {
+        const result = await originalMethod.apply(this, args);
+        return result;
+      } catch (error) {
+        logger.error(`${logMessage} - Error`);
+        throw error;
+      }
     };
     return descriptor;
   };

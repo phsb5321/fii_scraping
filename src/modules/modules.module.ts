@@ -11,4 +11,4 @@ import { YahooModule } from './yahoo/yahoo.module';
     YahooModule,
   ],
 })
-export class ModulesModule { }
+export class ModulesModule {}

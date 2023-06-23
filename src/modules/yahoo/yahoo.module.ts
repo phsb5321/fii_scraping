@@ -30,4 +30,4 @@ import { UpdateYahooStockDividendsService } from './usecases/update-yahoo-stock-
     UpdateYahooStockDividendsService,
   ],
 })
-export class YahooModule { }
+export class YahooModule {}

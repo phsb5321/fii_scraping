@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 import { FiiModelDB } from '@/modules/fii-explorer/model/Fii.entity';
 
@@ -125,5 +132,4 @@ export class B3HistoryModelDB {
     comment: 'Timestamp when the record was last updated',
   })
   updatedAt: Date;
-
 }
