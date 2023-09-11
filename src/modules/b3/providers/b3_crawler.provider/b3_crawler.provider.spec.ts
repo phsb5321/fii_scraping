@@ -25,9 +25,30 @@ describe('B3CrawlerProvider', () => {
     expect(stocks).toBeDefined();
   });
 
-  it('should have otherCodes', async () => {
+  it('should have otherCodes atribute', async () => {
     const stocks = await provider.getStockDetails('1023');
     const stock = stocks[0];
     expect(stock.otherCodes).toBeDefined();
+  });
+
+  describe('getStocks', () => {
+    it('should not panic with empty stock list', async () => {
+      // Arrange
+      const emptyStockList: StockI[] = [];
+      // Mocking getStocksFromPage that is a private method
+      jest.spyOn(provider as any, 'getStocksFromPage').mockResolvedValueOnce({
+        page: {
+          totalRecords: 0,
+          totalPages: 0,
+        },
+        results: emptyStockList,
+      });
+
+      // Act
+      const stocks = await provider.getStocks();
+
+      // Assert
+      expect(stocks).toEqual(emptyStockList);
+    });
   });
 });

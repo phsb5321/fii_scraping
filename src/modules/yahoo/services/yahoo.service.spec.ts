@@ -1,8 +1,8 @@
 //src/modules/yahoo/services/yahoo.service.spec.ts
+import { UpdateYahooStockDividendsService } from '@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service';
+import { UpdateYahooStockHistoryService } from '@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { YahooService } from './yahoo.service';
-import { UpdateYahooStockHistoryService } from '@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service';
-import { UpdateYahooStockDividendsService } from '@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service';
 
 describe('YahooService', () => {
   let service: YahooService;

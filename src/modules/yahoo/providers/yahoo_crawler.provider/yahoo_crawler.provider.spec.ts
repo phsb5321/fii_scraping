@@ -1,9 +1,9 @@
 // src/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider.spec.ts
 
-import axios from 'axios';
 import { YahooDividend } from '@/app/entities/Dividend/Dividend.entity';
-import { YahooStockHIstory } from '@/app/entities/YahooHistory/YahooHistory.entity';
+import { YahooStockHistory } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import axios from 'axios';
 import { YahooCrawlerProvider } from './yahoo_crawler.provider';
 
 // Mock the axios module
@@ -53,7 +53,7 @@ describe('YahooCrawlerProvider', () => {
     const keys = Object.keys(stock[0]);
 
     // Get the keys from the entity
-    const entityKeys = Object.keys(new YahooStockHIstory(stock[0]));
+    const entityKeys = Object.keys(new YahooStockHistory(stock[0]));
 
     // Compare the keys
     expect(keys).toEqual(entityKeys);

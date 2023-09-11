@@ -1,66 +1,59 @@
-// src/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service.ts
-
 import { In, Repository } from 'typeorm';
 
+import { StockModelDB } from '@/modules/b3/models/Stock.model';
 import { YahooDividendHistoryModelDB } from '@/modules/yahoo/models/YahooDividendHistory.model';
-import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import {
+  YahooCrawlerProvider
+} from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
 
 @Injectable()
 export class UpdateYahooStockDividendsService {
   private readonly logger = new Logger(UpdateYahooStockDividendsService.name);
 
   constructor(
-    @InjectRepository(StockModelDB)
-    private stockModelDB: Repository<StockModelDB>,
+    @InjectRepository(StockModelDB) private stockModelDB: Repository<StockModelDB>,
+    @InjectRepository(YahooDividendHistoryModelDB) private yahooDividendHistoryModelDB: Repository<YahooDividendHistoryModelDB>,
+    @Inject(YahooCrawlerProvider) private yahooCrawlerProvider: YahooCrawlerProvider,
+  ) { }
 
-    @InjectRepository(YahooDividendHistoryModelDB)
-    private yahooDividendHistoryModelDB: Repository<YahooDividendHistoryModelDB>,
-
-    @Inject(YahooCrawlerProvider)
-    private yahooCrawlerProvider: YahooCrawlerProvider,
-  ) {}
-
-  async execute(
-    stockCodeList?: number[],
-  ): Promise<YahooDividendHistoryModelDB[]> {
-    const stocks = await this.stockModelDB.find({
-      where: { code: In(stockCodeList) },
-    });
+  /**
+   * Update the Yahoo stock dividends.
+   *
+   * @param stockCodeList - List of stock codes to update.
+   * @returns - Array of updated Yahoo dividend history models.
+   */
+  async execute(stockCodeList?: number[]): Promise<YahooDividendHistoryModelDB[]> {
+    const stocks = await this.stockModelDB.find({ where: { code: In(stockCodeList || []) } });
 
     if (!stocks.length) {
       this.logger.warn('No stock codes found');
       return [];
     }
 
-    const stocksdividend = await Promise.all(
-      stocks.map(async ({ code }) => {
-        const stockDotSa = code + '.SA';
+    const stocksDividend = await this.updateStockDividends(stocks);
 
-        const yahooStockdividend =
-          await this.yahooCrawlerProvider.getStockdividend(stockDotSa);
+    this.logger.verbose(`Updated ${stocksDividend.length} stock dividend history`);
+    return stocksDividend;
+  }
 
-        if (!yahooStockdividend) return [];
+  /**
+   * Helper function to update and fetch stock dividends.
+   *
+   * @param stocks - List of stocks to update dividends for.
+   * @returns - Array of updated stock dividends.
+   */
+  private async updateStockDividends(stocks: StockModelDB[]): Promise<YahooDividendHistoryModelDB[]> {
+    const dividendsPromises = stocks.map(async stock => {
+      const yahooStockDividend = await this.yahooCrawlerProvider.getStockdividend(`${stock.code}.SA`);
+      if (!yahooStockDividend) return null;
 
-        const yahooStockdividendSaved =
-          await this.yahooDividendHistoryModelDB.upsert(yahooStockdividend, [
-            'stockId',
-            'date',
-          ]);
+      const yahooStockDividendSaved = await this.yahooDividendHistoryModelDB.upsert(yahooStockDividend, ['stockId', 'date']);
+      return this.yahooDividendHistoryModelDB.save(yahooStockDividendSaved.generatedMaps);
+    });
 
-        return (await this.yahooDividendHistoryModelDB.save(
-          yahooStockdividendSaved.generatedMaps,
-        )) as YahooDividendHistoryModelDB[];
-      }),
-    );
-
-    // Log how many stocks were update
-    this.logger.verbose(
-      `Updated ${stocksdividend.flat().length} stock dividend history`,
-    );
-
-    return stocksdividend.flat();
+    const dividends = await Promise.all(dividendsPromises);
+    return dividends.flat().filter(Boolean);
   }
 }

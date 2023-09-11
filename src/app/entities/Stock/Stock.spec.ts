@@ -1,4 +1,3 @@
-import { Stock } from './Stock.entity';
 
 describe('Stock', () => {
   it('should be defined', () => {

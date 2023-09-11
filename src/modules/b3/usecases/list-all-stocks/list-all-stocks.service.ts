@@ -1,29 +1,34 @@
-// src/modules/b3/usecases/list-all-stocks/list-all-stocks.service.ts
-
-import { Repository, FindManyOptions } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+/**
+ * ListAllStocksService is a service responsible for fetching all stock data from the database.
+ * It uses the StockModelDB repository to get the list of stocks.
+ * The results are then logged and returned.
+ */
 @Injectable()
 export class ListAllStocksService {
   private readonly logger = new Logger(ListAllStocksService.name);
 
+  /**
+   * Creates an instance of the ListAllStocksService.
+   * @param {Repository<StockModelDB>} stockModelRepository - The repository for StockModelDB, used for database operations.
+   */
   constructor(
-    // Inject the stock model repository for database operations
     @InjectRepository(StockModelDB)
-    private stockModelRepository: Repository<StockModelDB>,
+    private readonly stockModelRepository: Repository<StockModelDB>,
   ) { }
 
+  /**
+   * Fetches and returns all stocks from the database.
+   * @returns {Promise<StockModelDB[]>} The list of all stocks.
+   */
   async execute(): Promise<StockModelDB[]> {
-    // Fetch the list of stocks from the database
     const stocks = await this.stockModelRepository.find();
-
-    // Log the number of stocks fetched from the database
     this.logger.verbose(`Found ${stocks.length} stocks`);
-
-    // Return the list of stocks fetched from the database
     return stocks;
   }
 }

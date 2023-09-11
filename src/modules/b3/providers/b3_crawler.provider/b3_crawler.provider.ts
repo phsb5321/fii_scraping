@@ -1,8 +1,9 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
-import { Stock, StockI } from '@/app/entities/Stock/Stock.entity';
+import { Stock } from '@/app/entities/Stock/Stock.entity';
 import { Injectable } from '@nestjs/common';
 
+// Types
 interface QueryOptionsI {
   language: string;
   pageNumber?: number;
@@ -18,117 +19,72 @@ interface QueryResponseI {
   results: { [key: string]: string }[];
 }
 
+// Constants
+const BASE_URL = 'https://sistemaswebb3-listados.b3.com.br/listedCompaniesProxy/CompanyCall/';
+const DEFAULT_PAGINATION = {
+  language: 'pt-br',
+  pageNumber: 1,
+  pageSize: 100,
+};
+
 @Injectable()
 export class B3CrawlerProvider {
-  private readonly httpClient: AxiosInstance;
-
-  private readonly listUrl =
-    'https://sistemaswebb3-listados.b3.com.br/listedCompaniesProxy/CompanyCall/';
-
-  private readonly b3Options = {
+  private readonly httpClient: AxiosInstance = axios.create();
+  private readonly b3Endpoints = {
     list: 'GetInitialCompanies/',
     details: 'GetDetail/',
   };
 
-  constructor() {
-    this.httpClient = axios.create();
+  /**
+   * Builds the URL for the request.
+   */
+  private buildURL(endpoint: string, options: QueryOptionsI): string {
+    const base64Options = Buffer.from(JSON.stringify(options)).toString('base64');
+    return BASE_URL + endpoint + base64Options;
   }
 
   /**
-   * Fetches stocks data from a specific page with the given pagination options and b3Option.
-   * @param paginationOptions An object containing pagination options.
-   * @param b3Option The b3 option to fetch data from.
-   * @returns A promise that resolves with the queried stocks data.
+   * Fetches stocks data based on provided options and endpoint.
    */
-  private async getStocksFromPage(
-    paginationOptions: QueryOptionsI,
-    b3Option = this.b3Options.list,
-  ): Promise<QueryResponseI | { [key: string]: string }> {
-    const paginationOptionsBase64 = Buffer.from(
-      JSON.stringify(paginationOptions),
-    ).toString('base64');
-    const url = this.listUrl + b3Option + paginationOptionsBase64;
+  private async fetchStocks(options: QueryOptionsI, endpoint: string): Promise<QueryResponseI> {
+    const url = this.buildURL(endpoint, options);
     const { data } = await this.httpClient.get(url);
     return data;
   }
 
   /**
    * Fetches all the available stocks and their respective details.
-   * @returns A promise that resolves with an array of stocks.
    */
-  public async getStocks(): Promise<StockI[]> {
-    // Generate a PaginationOptions for the first page
-    const paginationOptions: QueryOptionsI = {
-      language: 'pt-br',
-      pageNumber: 1,
-      pageSize: 100,
-    };
+  public async getStocks(): Promise<Stock[]> {
+    const firstPage = await this.fetchStocks(DEFAULT_PAGINATION, this.b3Endpoints.list);
 
-    // Get the first page
-    const firstPage: QueryResponseI = (await this.getStocksFromPage(
-      paginationOptions,
-    )) as QueryResponseI;
-
-    // Get the remaining pages
     const remainingPages = await Promise.all(
       Array.from(
         { length: firstPage.page.totalPages - 1 },
         (_, index) => index + 2,
-      ).map(
-        async (pageNumber) =>
-          await this.getStocksFromPage({
-            ...paginationOptions,
-            pageNumber,
-          }),
+      ).map(pageNumber =>
+        this.fetchStocks({ ...DEFAULT_PAGINATION, pageNumber }, this.b3Endpoints.list),
       ),
     );
 
-    // Merge the first page with the remaining pages
-    const allPages = [firstPage, ...remainingPages];
+    // Flatten all stock results
+    const allStocks = [firstPage, ...remainingPages].flatMap(page => page.results);
 
-    // Get all stocks from all pages
-    const allStocks = allPages.reduce((accumulator, currentPage) => {
-      const { results } = currentPage;
-      // Verify if the current page has any stock
-      if (results && results.length > 0) {
-        // Merge the current page stocks with the accumulator
-        return [...accumulator, ...currentPage.results];
-      }
-      return accumulator;
-    }, []);
-
-    // Create a Stock entity for each stock
-    const stocks = allStocks.map((stock) => Stock.fromAbstract(stock));
-
-    return stocks;
+    return allStocks.map(stock => Stock.fromAbstract(stock));
   }
 
   /**
    * Provides a method to retrieve details of a stock from B3 by its codeCVM.
    */
   public async getStockDetails(codeCVM: string | string[]): Promise<Stock[]> {
-    // If a single stock is provided, wrap it in an array
     const stocks = Array.isArray(codeCVM) ? codeCVM : [codeCVM];
 
-    // Generate the QueryParams for all stocks
-    const queryParams: QueryOptionsI[] = stocks.map((code) => ({
-      language: 'pt-br',
-      codeCVM: code,
-    }));
-
-    // Get the stock details using Promise.all
     const stockDetails = await Promise.all(
-      queryParams.map(
-        async (queryParam) =>
-          await this.getStocksFromPage(queryParam, this.b3Options.details),
+      stocks.map(code =>
+        this.fetchStocks({ language: 'pt-br', codeCVM: code }, this.b3Endpoints.details),
       ),
     );
 
-    // Create a Stock entity for each stock
-    const stocksEntities = stockDetails.map(
-      (stock) => new Stock(stock as StockI),
-    );
-
-    return stocksEntities;
+    return stockDetails.map(stock => new Stock(stock as Stock));
   }
 }

@@ -1,10 +1,8 @@
 // Import necessary modules and dependencies
-import { AppController } from '@/app/controllers/app.controller';
 import { InfraModule } from '@/app/infra/infra.module';
-import { AppService } from '@/app/services/app.service';
 import { ModulesModule } from '@/modules/modules.module';
 import { BullModule } from '@nestjs/bull';
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -35,10 +33,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       username: 'root', // Database username
       password: process.env.MYSQL_ROOT_PASSWORD, // Database password
       database: process.env.MYSQL_DATABASE, // Database name
-      synchronize: true, // Auto-sync the database with models
       autoLoadEntities: true, // Auto-load all entities
       timezone: '-03:00', // Set Brazil timezone
       dateStrings: true, // Enable date strings formatting
+      migrationsRun: true, // Run migrations automatically
+      synchronize: true, // Synchronize database schema with entities
     }),
 
     // Import the Bull module for handling background jobs
@@ -50,17 +49,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       },
     }),
 
+
     // Import the application modules
     ModulesModule,
 
     // Import the infrastructure module
     InfraModule,
   ],
-  controllers: [AppController], // Declare the main application controller
+  controllers: [], // Declare the main application controller
   providers: [
     // Register the main application service
-    AppService,
   ],
 })
 // Export the main application module
-export class AppModule {}
+export class AppModule { }

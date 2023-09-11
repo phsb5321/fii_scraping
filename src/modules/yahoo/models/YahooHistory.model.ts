@@ -1,12 +1,12 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-import { YahooStockHIstory } from '@/app/entities/YahooHistory/YahooHistory.entity';
+import { YahooStockHistory } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { StockModelDB } from '@/modules/b3/models/Stock.model';
 
 @Entity({
   name: 'yahoo_history',
 })
-export class YahooHistoryModelDB implements YahooStockHIstory {
+export class YahooHistoryModelDB implements YahooStockHistory {
   @PrimaryGeneratedColumn({
     type: 'int',
     comment: 'Unique identifier of the record',

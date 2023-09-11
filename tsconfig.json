@@ -1,27 +1,36 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2017",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
-    // Add @ alias for src folder
+    // Basic Options
+    "target": "es2022",                       // Specify the ECMAScript target version
+    "module": "commonjs",                     // Specify module code generation
+    "outDir": "./dist",                       // Output directory for compiled files
+    "baseUrl": "./",                          // Base URL for resolving module names and type reference directives
+    "incremental": true,                      // Enable incremental compilation by storing info between compilations
+    "declaration": true,                      // Generate corresponding ".d.ts" file for the output
+    "sourceMap": true,                        // Generate source maps
+
+    // Path Mappings
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
-    }
+      "@/*": ["src/*"]                        // Allows '@' alias for 'src' folder
+    },
+
+    // Strict Type-Checking Options
+    "strictNullChecks": false,                // Disable strict null checks
+    "noImplicitAny": false,                   // Raise error on expressions and declarations with an implied 'any' type
+
+    // Additional Checks
+    "forceConsistentCasingInFileNames": false,// Do not ensure consistent casing in filenames
+    "noFallthroughCasesInSwitch": false,      // Do not report fallthrough cases in switch statements
+
+    // Module Resolution Options
+    "allowSyntheticDefaultImports": true,     // Allow default imports from modules with no default export
+
+    // Experimental Options
+    "experimentalDecorators": true,           // Enables experimental support for ES decorators
+    "emitDecoratorMetadata": true,            // Emit design-type metadata for decorated declarations
+
+    // Advanced Options
+    "removeComments": true,                   // Remove comments from the output
+    "skipLibCheck": true                      // Skip type checking of declaration files
   }
 }

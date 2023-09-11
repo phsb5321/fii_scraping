@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CheerioProvider } from './cheerio-provider/cheerio-provider';
 
 @Module({
-  providers: [CheerioProvider],
+  providers: [],
 })
-export class InfraModule {}
+export class InfraModule { }

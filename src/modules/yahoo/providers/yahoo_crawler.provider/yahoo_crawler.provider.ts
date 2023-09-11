@@ -1,93 +1,88 @@
-// src/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider.ts
-
 import axios from 'axios';
 
+import { YahooDividend, YahooDividendI } from '@/app/entities/Dividend/Dividend.entity';
 import {
-  YahooStockHIstory,
-  YahooStockHIstoryI,
+  YahooStockHistory
 } from '@/app/entities/YahooHistory/YahooHistory.entity';
-
-import {
-  YahooDividend,
-  YahooDividendI,
-} from '@/app/entities/Dividend/Dividend.entity';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class YahooCrawlerProvider {
-  baseUrl = 'https://query1.finance.yahoo.com/v7/finance/download/';
-  historyConfigs: string;
-  dividendConfigs: string;
+  private readonly baseUrl = 'https://query1.finance.yahoo.com/v7/finance/download/';
+  private readonly historyConfigs = `?period1=0&period2=${Date.now()}&interval=1d&events=history&includeAdjustedClose=true`;
+  private readonly dividendConfigs = `?period1=0&period2=${Date.now()}&interval=1d&events=div&includeAdjustedClose=true`;
 
-  constructor() {
-    this.historyConfigs = `?period1=0&period2=${new Date()}&interval=1d&events=history&includeAdjustedClose=true`;
-    this.dividendConfigs = `?period1=0&period2=${new Date()}&interval=1d&events=div&includeAdjustedClose=true`;
+  /**
+   * Fetch stock trade history for a given stock code.
+   *
+   * @param stockCode - The stock code to fetch history for.
+   * @returns - The stock history.
+   */
+  async getStockTradeHistory(stockCode: string): Promise<YahooStockHistory[]> {
+    return this.fetchData(stockCode, this.historyConfigs, YahooStockHistory.fromAbstract);
   }
 
-  async getStockTradeHistory(stockCode: string): Promise<YahooStockHIstoryI[]> {
-    const { data } = await axios
-      .get(`${this.baseUrl}${stockCode}${this.historyConfigs}`)
-      .catch((error) => {
-        throw new Error(
-          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.historyConfigs}`,
-        );
-      });
-
-    // Parse data to JSON
-    const parsedData = this.parseCSV(data);
-
-    // Now, format the Date key to a Date object
-    return parsedData.map((item) => {
-      return YahooStockHIstory.fromAbstract(item);
-    });
-  }
-
+  /**
+   * Fetch stock dividend for a given stock code.
+   *
+   * @param stockCode - The stock code to fetch dividends for.
+   * @returns - The stock dividends.
+   */
   async getStockdividend(stockCode: string): Promise<YahooDividendI[]> {
-    const { data } = await axios
-      .get(`${this.baseUrl}${stockCode}${this.dividendConfigs}`)
-      .catch((error) => {
-        throw new Error(
-          `${error.message} - Stock Code: ${stockCode} - URL: ${this.baseUrl}${stockCode}${this.dividendConfigs}`,
-        );
-      });
+    return this.fetchData(stockCode, this.dividendConfigs, YahooDividend.fromAbstract);
+  }
 
-    // Parse data to JSON
+  /**
+   * Core method to fetch data and parse it.
+   *
+   * @param stockCode - The stock code to fetch data for.
+   * @param config - The configurations for the fetching (either history or dividends).
+   * @param transform - The transformation function.
+   * @returns - Transformed data.
+   */
+  private async fetchData(stockCode: string, config: string, transform: (data: any) => any): Promise<any[]> {
+    const url = `${this.baseUrl}${stockCode}${config}`;
+
+    const { data } = await axios.get(url).catch((error) => {
+      throw new Error(`${error.message} - Stock Code: ${stockCode} - URL: ${url}`);
+    });
+
     const parsedData = this.parseCSV(data);
+    return parsedData.map(transform);
+  }
 
-    // Now, format the Date key to a Date object
-    return parsedData.map((item) => {
-      return YahooDividend.fromAbstract(item);
+  /**
+   * Parse CSV data into JSON format.
+   *
+   * @param data - CSV formatted string.
+   * @returns - Array of objects representing each line of the CSV.
+   */
+  private parseCSV(data: string): { [key: string]: string }[] {
+    const lines = data.split('\n');
+    const headers = lines[0].split(',').map(this.toCamelCase);
+
+    return lines.slice(1).map((line) => {
+      return line.split(',').reduce((obj, value, index) => {
+        obj[headers[index]] = value;
+        return obj;
+      }, {});
     });
   }
 
-  private parseCSV(data: string): { [key: string]: string }[] {
-    // Split the data by new line
-    const lines = data.split('\n');
-
-    // Get the headers
-    const headers = lines[0].split(',');
-
-    // Make the headers camelCase
-    headers.forEach((header, index) => {
-      headers[index] = header
-        .split(' ')
-        .map((word, index) => {
-          if (index === 0) return word.toLowerCase();
-          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        })
-        .join('');
-    });
-
-    // For each line, create an object with the headers as keys
-    return lines.slice(1).map((line) => {
-      const obj = {};
-      const currentline = line.split(',');
-
-      headers.forEach((header, index) => {
-        obj[header] = currentline[index];
-      });
-
-      return obj;
-    });
+  /**
+   * Convert a string to camelCase.
+   *
+   * @param str - The string to convert.
+   * @returns - The camelCased string.
+   */
+  private toCamelCase(str: string): string {
+    return str
+      .split(' ')
+      .map((word, index) =>
+        index === 0
+          ? word.toLowerCase()
+          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
+      .join('');
   }
 }
