@@ -1,15 +1,15 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
-import { YahooStockHistory } from '@/app/entities/YahooHistory/YahooHistory.entity';
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
+import { YahooStockHistory } from "@/app/entities/YahooHistory/YahooHistory.entity";
+import { StockModelDB } from "@/modules/b3/models/Stock.model";
 
 @Entity({
-  name: 'yahoo_history',
+  name: "yahoo_history",
 })
 export class YahooHistoryModelDB implements YahooStockHistory {
   @PrimaryGeneratedColumn({
-    type: 'int',
-    comment: 'Unique identifier of the record',
+    type: "int",
+    comment: "Unique identifier of the record",
   })
   id: number;
 
@@ -18,15 +18,15 @@ export class YahooHistoryModelDB implements YahooStockHistory {
   stock: StockModelDB;
 
   @Column({
-    type: 'date',
-    comment: 'Date of the record',
+    type: "date",
+    comment: "Date of the record",
   })
   date: Date;
 
   @Column({
     nullable: true,
-    comment: 'Opening price',
-    type: 'decimal',
+    comment: "Opening price",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
@@ -34,8 +34,8 @@ export class YahooHistoryModelDB implements YahooStockHistory {
 
   @Column({
     nullable: true,
-    comment: 'Highest price',
-    type: 'decimal',
+    comment: "Highest price",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
@@ -43,8 +43,8 @@ export class YahooHistoryModelDB implements YahooStockHistory {
 
   @Column({
     nullable: true,
-    comment: 'Lowest price',
-    type: 'decimal',
+    comment: "Lowest price",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
@@ -52,8 +52,8 @@ export class YahooHistoryModelDB implements YahooStockHistory {
 
   @Column({
     nullable: true,
-    comment: 'Closing price',
-    type: 'decimal',
+    comment: "Closing price",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
@@ -61,8 +61,8 @@ export class YahooHistoryModelDB implements YahooStockHistory {
 
   @Column({
     nullable: true,
-    comment: 'Adjusted closing price',
-    type: 'decimal',
+    comment: "Adjusted closing price",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
@@ -70,24 +70,24 @@ export class YahooHistoryModelDB implements YahooStockHistory {
 
   @Column({
     nullable: true,
-    comment: 'Volume',
-    type: 'decimal',
+    comment: "Volume",
+    type: "decimal",
     precision: 15,
     scale: 5,
   })
   volume: number;
 
   @Column({
-    type: 'timestamp',
-    comment: 'Date of creation',
-    default: () => 'CURRENT_TIMESTAMP',
+    type: "timestamp",
+    comment: "Date of creation",
+    default: () => "CURRENT_TIMESTAMP",
   })
   createdAt: Date;
 
   @Column({
-    type: 'timestamp',
-    comment: 'Date of last update',
-    default: () => 'CURRENT_TIMESTAMP',
+    type: "timestamp",
+    comment: "Date of last update",
+    default: () => "CURRENT_TIMESTAMP",
   })
   updatedAt: Date;
 }

@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UpdateYahooStockDividendsService } from './update-yahoo-stock-dividends.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { YahooDividendHistoryModelDB } from '@/modules/yahoo/models/YahooDividendHistory.model';
-import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import { Test, TestingModule } from "@nestjs/testing";
+import { UpdateYahooStockDividendsService } from "./update-yahoo-stock-dividends.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { StockModelDB } from "@/modules/b3/models/Stock.model";
+import { YahooDividendHistoryModelDB } from "@/modules/yahoo/models/YahooDividendHistory.model";
+import { YahooCrawlerProvider } from "@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider";
 
-describe('UpdateYahooStockDividendsService', () => {
+describe("UpdateYahooStockDividendsService", () => {
   let service: UpdateYahooStockDividendsService;
 
   beforeEach(async () => {
@@ -39,10 +39,12 @@ describe('UpdateYahooStockDividendsService', () => {
       ],
     }).compile();
 
-    service = module.get<UpdateYahooStockDividendsService>(UpdateYahooStockDividendsService);
+    service = module.get<UpdateYahooStockDividendsService>(
+      UpdateYahooStockDividendsService
+    );
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 });

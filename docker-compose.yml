@@ -12,7 +12,7 @@ services:
     ports:
       - 4000:3000 # Map the host port 3000 to the container port 3000
       - 3500:3500 # Map the host port 3500 to the container port 3500
-    command: sh -c "yarn install && yarn run start:dev" # Use yarn to install dependencies and start the app in development mode
+    command: sh -c "npm install -g pnpm && pnpm install && pnpm run start:dev"
     depends_on:
       - db # Ensure the db service is started before the app service
     networks:
@@ -45,22 +45,6 @@ services:
       - cache:/data # Mount the named volume "cache" to /data in the container
     networks:
       - db # Connect the cache service to the db network
-
-  cloudbeaver:
-    image: dbeaver/cloudbeaver:latest
-    container_name: cloudbeaver
-    ports:
-      - "8978:8978"
-    environment:
-      CB_SERVER_NAME: "cloudbeaver-server"
-      CB_DATABASE_DRIVER_NAME: "mysql"
-      CB_DATABASE_JDBC_URL: "jdbc:mysql://db:3306/fii_scrapping"
-      CB_DATABASE_USERNAME: "root"
-      CB_DATABASE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    depends_on:
-      - db
-    networks:
-      - db
 
 # Networks used in the services
 networks:

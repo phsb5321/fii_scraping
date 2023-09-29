@@ -5,42 +5,42 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-} from 'typeorm';
+} from "typeorm";
 
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { StockCode } from '@/app/entities/StockCode/StockCode';
+import { StockModelDB } from "@/modules/b3/models/Stock.model";
+import { StockCode } from "@/app/entities/StockCode/StockCode";
 
 @Entity({
-  name: 'stock_code',
+  name: "stock_code",
 })
 export class StockCodeModelDB implements StockCode {
   @PrimaryGeneratedColumn({
-    type: 'int',
-    comment: 'Unique identifier of the record',
+    type: "int",
+    comment: "Unique identifier of the record",
   })
   id: number;
 
   @ManyToOne(() => StockModelDB, (stock) => stock)
   stock: StockModelDB;
 
-  @Column({ comment: 'Stock code' })
+  @Column({ comment: "Stock code" })
   code: string;
 
-  @Column({ comment: 'Stock ISIN' })
+  @Column({ comment: "Stock ISIN" })
   isin: string;
 
   @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    comment: 'Timestamp when the record was created',
+    type: "timestamp",
+    default: () => "CURRENT_TIMESTAMP(6)",
+    comment: "Timestamp when the record was created",
   })
   createdAt: Date;
 
   @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)',
-    comment: 'Timestamp when the record was last updated',
+    type: "timestamp",
+    default: () => "CURRENT_TIMESTAMP(6)",
+    onUpdate: "CURRENT_TIMESTAMP(6)",
+    comment: "Timestamp when the record was last updated",
   })
   updatedAt: Date;
 }

@@ -1,10 +1,10 @@
 //src/modules/yahoo/services/yahoo.service.spec.ts
-import { UpdateYahooStockDividendsService } from '@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service';
-import { UpdateYahooStockHistoryService } from '@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service';
-import { Test, TestingModule } from '@nestjs/testing';
-import { YahooService } from './yahoo.service';
+import { UpdateYahooStockDividendsService } from "@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service";
+import { UpdateYahooStockHistoryService } from "@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service";
+import { Test, TestingModule } from "@nestjs/testing";
+import { YahooService } from "./yahoo.service";
 
-describe('YahooService', () => {
+describe("YahooService", () => {
   let service: YahooService;
 
   beforeEach(async () => {
@@ -28,7 +28,7 @@ describe('YahooService', () => {
     service = module.get<YahooService>(YahooService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 });

@@ -1,14 +1,32 @@
-import { AppModule } from '@/app/app.module';
-import { NestFactory } from '@nestjs/core';
+import { AppModule } from "@/app/app.module";
+import { NestFactory } from "@nestjs/core";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
-    snapshot: true,
+    logger: ["error", "warn", "debug", "log", "verbose"],
   });
-  await app.listen(3000).then(() => {
-    // Use a package emoji to indicate that the server is running
-    console.log('📦 Server running on port 3000');
-  });
+
+  // Enable CORS
+  app.enableCors();
+
+  // Set Global Prefix
+  app.setGlobalPrefix('api');
+
+  // Set up Swagger
+  const config = new DocumentBuilder()
+    .setTitle('NestJS API')
+    .setDescription('The description of the API')
+    .setVersion('1.0')
+    .addTag('nestjs')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
+
+  await app.listen(3000);
+  console.log("📦 Server running on http://localhost:3000");
+  console.log("📦 Swagger running on http://localhost:3000/api-docs");
 }
+
 bootstrap();

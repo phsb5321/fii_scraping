@@ -1,10 +1,10 @@
-import { Repository } from 'typeorm';
+import { Repository } from "typeorm";
 
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { StockCodeModelDB } from '@/modules/b3/models/StockCode.model';
-import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { StockModelDB } from "@/modules/b3/models/Stock.model";
+import { StockCodeModelDB } from "@/modules/b3/models/StockCode.model";
+import { B3CrawlerProvider } from "@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
 
 /**
  * UpdateAllStockService is responsible for fetching updated stock information from
@@ -25,11 +25,11 @@ export class UpdateAllStockService {
     @InjectRepository(StockCodeModelDB)
     private readonly stockCodeModelRepository: Repository<StockCodeModelDB>,
     @Inject(B3CrawlerProvider)
-    private readonly b3Crawler: B3CrawlerProvider,
-  ) { }
+    private readonly b3Crawler: B3CrawlerProvider
+  ) {}
 
   /**
-   * Executes the update process to fetch updated stock information from the 
+   * Executes the update process to fetch updated stock information from the
    * B3 Crawler and update the stocks in the database.
    *
    * @returns {Promise<StockModelDB[]>} An array of updated StockModelDB instances.
@@ -38,13 +38,15 @@ export class UpdateAllStockService {
     const stocks = await this.stockModelRepository.find();
 
     if (stocks.length === 0) {
-      this.logger.verbose('No stocks found');
+      this.logger.verbose("No stocks found");
       return [];
     }
 
     this.logger.verbose(`About to update ${stocks.length} stocks`);
 
-    const stockDetails = await this.b3Crawler.getStockDetails(stocks.map(stock => stock.codeCVM));
+    const stockDetails = await this.b3Crawler.getStockDetails(
+      stocks.map((stock) => stock.codeCVM)
+    );
     const updatedStocks: StockModelDB[] = [];
 
     for (const [index, stockDetail] of stockDetails.entries()) {
@@ -57,11 +59,16 @@ export class UpdateAllStockService {
       updatedStocks.push(response);
     }
 
-    this.logger.log(`Updated ${updatedStocks.length} stock(s) in the database.`);
+    this.logger.log(
+      `Updated ${updatedStocks.length} stock(s) in the database.`
+    );
     return updatedStocks;
   }
 
-  private async updateStock(stock: StockModelDB, stockDetail: any): Promise<StockModelDB> {
+  private async updateStock(
+    stock: StockModelDB,
+    stockDetail: any
+  ): Promise<StockModelDB> {
     return this.stockModelRepository.save({
       ...stock,
       ...stockDetail,
@@ -69,12 +76,15 @@ export class UpdateAllStockService {
     });
   }
 
-  private async updateOtherCodes(otherCodes: any[], stockId: number): Promise<void> {
-    const otherCodesList = otherCodes.map(code => ({
+  private async updateOtherCodes(
+    otherCodes: any[],
+    stockId: number
+  ): Promise<void> {
+    const otherCodesList = otherCodes.map((code) => ({
       ...code,
       stock: { id: stockId },
     }));
 
-    await this.stockCodeModelRepository.upsert(otherCodesList, ['code']);
+    await this.stockCodeModelRepository.upsert(otherCodesList, ["code"]);
   }
 }

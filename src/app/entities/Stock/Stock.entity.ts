@@ -4,7 +4,6 @@
  * Also provides methods to generate a stock instance from abstract data.
  */
 export class Stock {
-  // All properties are optional
   codeCVM?: string;
   issuingCompany?: string;
   companyName?: string;
@@ -40,17 +39,20 @@ export class Stock {
    * It primarily converts date strings into Date objects and strings to numbers where needed.
    * @param object - Abstract data object to be transformed to Stock.
    */
-  public static fromAbstract(object: { [key: string]: any }): Stock {
-    const dateParts = object.dateListing?.split('/');
-
-    // Check if dateParts exists before destructuring
-    const date = dateParts ? new Date(+dateParts[2], +dateParts[1] - 1, +dateParts[0]) : undefined;
-
+  public static fromAbstract(object: Record<string, any>): Stock {
+    const date = this.parseDate(object.dateListing);
     return new Stock({
       ...object,
       dateListing: date,
       type: Number(object.type),
       marketIndicator: Number(object.marketIndicator),
     });
+  }
+
+  private static parseDate(dateString?: string): Date | undefined {
+    if (!dateString) return;
+
+    const [day, month, year] = dateString.split("/");
+    return new Date(Date.UTC(+year, +month - 1, +day)); // Use UTC time
   }
 }

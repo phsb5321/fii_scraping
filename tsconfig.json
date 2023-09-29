@@ -8,6 +8,7 @@
     "incremental": true,                      // Enable incremental compilation by storing info between compilations
     "declaration": true,                      // Generate corresponding ".d.ts" file for the output
     "sourceMap": true,                        // Generate source maps
+    "esModuleInterop": true,                  // Emit additional JavaScript to ease support for importing CommonJS modules
 
     // Path Mappings
     "paths": {

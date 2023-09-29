@@ -1,6 +1,6 @@
-import { B3HistoryModule } from '@/modules/b3/b3.module';
-import { YahooModule } from '@/modules/yahoo/yahoo.module';
-import { Module } from '@nestjs/common';
+import { B3HistoryModule } from "@/modules/b3/b3.module";
+import { YahooModule } from "@/modules/yahoo/yahoo.module";
+import { Module } from "@nestjs/common";
 
 @Module({
   imports: [
@@ -10,4 +10,4 @@ import { Module } from '@nestjs/common';
   ],
   controllers: [],
 })
-export class ModulesModule { }
+export class ModulesModule {}
