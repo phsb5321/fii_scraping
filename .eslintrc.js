@@ -17,6 +17,7 @@ module.exports = {
 
   // Extends the list of ESLint configurations with the specified configurations
   extends: [
+    'prettier',
     // TypeScript ESLint recommended rules
     'plugin:@typescript-eslint/recommended',
     // Enables eslint-plugin-prettier and displays prettier errors as ESLint errors.

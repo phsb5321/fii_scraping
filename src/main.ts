@@ -1,10 +1,10 @@
-import { AppModule } from "@/app/app.module";
-import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AppModule } from '@/app/app.module';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    logger: ["error", "warn", "debug", "log", "verbose"],
+    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
   });
 
   // Enable CORS
@@ -25,8 +25,12 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
 
   await app.listen(3000);
-  console.log("📦 Server running on http://localhost:3000");
-  console.log("📦 Swagger running on http://localhost:3000/api-docs");
+
+  // General Api
+  console.log('📦 Server running on http://localhost:3000/api');
+
+  // Swagger
+  console.log('📚 Swagger running on http://localhost:3000/api-docs');
 }
 
 bootstrap();

@@ -1,13 +1,13 @@
-import { StockCode } from "./StockCode";
+import { StockCode } from './StockCode';
 
-describe("StockCode", () => {
+describe('StockCode', () => {
   // Testing the constructor
-  describe("constructor", () => {
-    it("should create an instance with given code and isin", () => {
+  describe('constructor', () => {
+    it('should create an instance with given code and isin', () => {
       // Arrange
       const testData = {
-        code: "AAPL",
-        isin: "US0378331005",
+        code: 'AAPL',
+        isin: 'US0378331005',
       };
 
       // Act
@@ -19,17 +19,17 @@ describe("StockCode", () => {
   });
 
   // Testing the fromAbstract method
-  describe("fromAbstract", () => {
-    it("should create a StockCode instance from an abstract object", () => {
+  describe('fromAbstract', () => {
+    it('should create a StockCode instance from an abstract object', () => {
       // Arrange
       const object = {
-        code: "MSFT",
-        isin: "US5949181045",
-        otherField: "extraData", // This should be ignored
+        code: 'MSFT',
+        isin: 'US5949181045',
+        otherField: 'extraData', // This should be ignored
       };
       const expectedOutput = {
-        code: "MSFT",
-        isin: "US5949181045",
+        code: 'MSFT',
+        isin: 'US5949181045',
       };
 
       // Act
@@ -39,40 +39,34 @@ describe("StockCode", () => {
       expect(stockCode).toEqual(expectedOutput);
     });
 
-    it("should not create a StockCode instance if required fields are missing", () => {
+    it('should not create a StockCode instance if required fields are missing', () => {
       // Arrange
       const object = {
-        otherField: "extraData", // Missing `code` and `isin`
+        otherField: 'extraData', // Missing `code` and `isin`
       };
 
       // Act & Assert
-      expect(() => StockCode.fromAbstract(object)).toThrow(
-        "Required fields `code` and `isin` are missing"
-      );
+      expect(() => StockCode.fromAbstract(object)).toThrow('Required fields `code` and `isin` are missing');
     });
 
-    it("should not create a StockCode instance if only `code` is provided", () => {
+    it('should not create a StockCode instance if only `code` is provided', () => {
       // Arrange
       const object = {
-        code: "MSFT", // Missing `isin`
+        code: 'MSFT', // Missing `isin`
       };
 
       // Act & Assert
-      expect(() => StockCode.fromAbstract(object)).toThrow(
-        "Required fields `code` and `isin` are missing"
-      );
+      expect(() => StockCode.fromAbstract(object)).toThrow('Required fields `code` and `isin` are missing');
     });
 
-    it("should not create a StockCode instance if only `isin` is provided", () => {
+    it('should not create a StockCode instance if only `isin` is provided', () => {
       // Arrange
       const object = {
-        isin: "US5949181045", // Missing `code`
+        isin: 'US5949181045', // Missing `code`
       };
 
       // Act & Assert
-      expect(() => StockCode.fromAbstract(object)).toThrow(
-        "Required fields `code` and `isin` are missing"
-      );
+      expect(() => StockCode.fromAbstract(object)).toThrow('Required fields `code` and `isin` are missing');
     });
   });
 });

@@ -1,11 +1,10 @@
-import axios from "axios";
-
 import {
   YahooDividend,
   YahooDividendI,
 } from "@/app/entities/Dividend/Dividend.entity";
 import { YahooStockHistory } from "@/app/entities/YahooHistory/YahooHistory.entity";
 import { Injectable } from "@nestjs/common";
+import axios from "axios";
 
 @Injectable()
 export class YahooCrawlerProvider {
@@ -24,7 +23,7 @@ export class YahooCrawlerProvider {
     return this.fetchData(
       stockCode,
       this.historyConfigs,
-      YahooStockHistory.fromAbstract
+      YahooStockHistory.fromAbstract,
     );
   }
 
@@ -38,7 +37,7 @@ export class YahooCrawlerProvider {
     return this.fetchData(
       stockCode,
       this.dividendConfigs,
-      YahooDividend.fromAbstract
+      YahooDividend.fromAbstract,
     );
   }
 
@@ -53,13 +52,13 @@ export class YahooCrawlerProvider {
   private async fetchData(
     stockCode: string,
     config: string,
-    transform: (data: any) => any
+    transform: (data: any) => any,
   ): Promise<any[]> {
     const url = `${this.baseUrl}${stockCode}${config}`;
 
     const { data } = await axios.get(url).catch((error) => {
       throw new Error(
-        `${error.message} - Stock Code: ${stockCode} - URL: ${url}`
+        `${error.message} - Stock Code: ${stockCode} - URL: ${url}`,
       );
     });
 
@@ -97,7 +96,7 @@ export class YahooCrawlerProvider {
       .map((word, index) =>
         index === 0
           ? word.toLowerCase()
-          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
       )
       .join("");
   }

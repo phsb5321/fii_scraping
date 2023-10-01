@@ -28,7 +28,7 @@ export class YahooDividend implements YahooDividendI {
    * @returns An instance of YahooDividend.
    */
   public static fromAbstract(object: { [key: string]: any }): YahooDividend {
-    const [day, month, year] = object.date?.split("/") ?? [];
+    const [day, month, year] = object.date?.split('/') ?? [];
     const date = year ? new Date(`${year}-${month}-${day}`) : undefined;
 
     return new YahooDividend({

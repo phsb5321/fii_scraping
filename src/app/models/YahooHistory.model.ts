@@ -1,7 +1,13 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { StockModelDB } from "@/app/models/Stock.model";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 
 import { YahooStockHistory } from "@/app/entities/YahooHistory/YahooHistory.entity";
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
 
 @Entity({
   name: "yahoo_history",
@@ -13,9 +19,15 @@ export class YahooHistoryModelDB implements YahooStockHistory {
   })
   id: number;
 
-  // A Many-to-One relationship is used here because the same stock can have multiple records in the history table
-  @ManyToOne(() => StockModelDB, (stock) => stock)
+  @ManyToOne(() => StockModelDB, (stock) => stock, { onDelete: "CASCADE" }) // Adjust the onDelete behavior as needed
+  @JoinColumn({ name: "stockId" }) // This will create a stockId column in yahoo_dividend_history table as a foreign key.
   stock: StockModelDB;
+
+  @Column({
+    type: "int",
+    nullable: true, // Make it nullable or not based on your requirements
+  })
+  stockId: number;
 
   @Column({
     type: "date",
@@ -30,7 +42,7 @@ export class YahooHistoryModelDB implements YahooStockHistory {
     precision: 15,
     scale: 5,
   })
-  open: number;
+  open?: number;
 
   @Column({
     nullable: true,

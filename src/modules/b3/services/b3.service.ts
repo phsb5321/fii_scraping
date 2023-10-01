@@ -1,79 +1,67 @@
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
-import { ScrapeAllStocksService } from "@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service";
-import { UpdateAllStockService } from "@/modules/b3/usecases/update-all-stock/update-all-stock.service";
-import { Process, Processor } from "@nestjs/bull";
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import { Job } from "bull";
+import { StockModelDB } from '@/app/models/Stock.model';
+import { EventConfigs } from '@/app/utils/EventConfigs';
+import { ListAllStocksService } from '@/modules/b3/usecases/list-all-stocks/list-all-stocks.service';
+import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
+import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
-/**
- * The B3Service class manages and processes stock data. It handles operations
- * like scraping stock details, updating stock data, and processing stock history.
- */
-@Processor("stocks-queue")
 @Injectable()
-export class B3Service implements OnModuleInit {
+export class B3Service {
   private logger = new Logger(B3Service.name);
 
   constructor(
     private scrapeAllStocksService: ScrapeAllStocksService,
-    private updateAllStockService: UpdateAllStockService
+    private updateAllStockService: UpdateAllStockService,
+    private listAllStocksService: ListAllStocksService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
-  /**
-   * Called when the module is initialized.
-   */
-  async onModuleInit(): Promise<void> {
-    this.logger.verbose(`B3Service initialized.`);
+  @OnEvent(EventConfigs.SCRAPE_ALL_STOCKS)
+  async handleScrapeAllStocks(): Promise<void> {
+    try {
+      const result = await this.scrapeAllStocks();
+      this.logger.verbose(`Handled ${EventConfigs.SCRAPE_ALL_STOCKS} event`);
+      this.eventEmitter.emit(EventConfigs.SCRAPE_ALL_STOCKS_RESPONSE, result);
+    } catch (error) {
+      this.logger.error(`Error in ${EventConfigs.SCRAPE_ALL_STOCKS} event`, error.stack);
+      throw error;
+    }
   }
 
-  /**
-   * Scrapes all stocks and logs the amount scraped.
-   * @returns {Promise<StockModelDB[]>} The list of scraped stocks.
-   */
+  @OnEvent(EventConfigs.SCRAPE_ALL_STOCKS_DETAILS)
+  async handleScrapeAllStocksDetails(): Promise<void> {
+    try {
+      const result = await this.scrapeAllStocksDetails();
+      this.logger.verbose(`Handled ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS} event`);
+      this.eventEmitter.emit(EventConfigs.SCRAPE_ALL_STOCKS_DETAILS_RESPONSE, result);
+    } catch (error) {
+      this.logger.error(`Error in ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS} event`, error.stack);
+      throw error;
+    }
+  }
+
   async scrapeAllStocks(): Promise<StockModelDB[]> {
+    this.logger.verbose(`Executing ${EventConfigs.SCRAPE_ALL_STOCKS}`);
     const scrapedStocks = await this.scrapeAllStocksService.execute();
     return scrapedStocks;
   }
 
-  /**
-   * Updates details for all stocks and logs the process.
-   * @returns {Promise<StockModelDB[]>} - The updated stocks list.
-   */
   async scrapeAllStocksDetails(): Promise<StockModelDB[]> {
     try {
+      this.logger.verbose(`Executing ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS}`);
       const scrapedStocksDetails = await this.updateAllStockService.execute();
-      this.logger.verbose(
-        `Updated details for ${scrapedStocksDetails.length} stocks`
-      );
+      this.logger.verbose(`Updated details for ${scrapedStocksDetails.length} stocks`);
       return scrapedStocksDetails;
     } catch (error) {
-      this.logger.error(error.message, error.stack);
+      this.logger.error(`Error in ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS}`, error.stack);
       throw error;
     }
   }
 
-  @Process("scrape-all-stocks")
-  async handleScrapeAllStocks(job: Job): Promise<void> {
-    try {
-      await this.scrapeAllStocks();
-      this.logger.verbose(`Handled scrapeAllStocks job ${job.id}`);
-    } catch (error) {
-      this.logger.error(`Error in scrapeAllStocks job ${job.id}`, error.stack);
-      throw error;
-    }
-  }
-
-  @Process("scrape-all-stocks-details")
-  async handleScrapeAllStocksDetails(job: Job): Promise<void> {
-    try {
-      await this.scrapeAllStocksDetails();
-      this.logger.verbose(`Handled scrapeAllStocksDetails job ${job.id}`);
-    } catch (error) {
-      this.logger.error(
-        `Error in scrapeAllStocksDetails job ${job.id}`,
-        error.stack
-      );
-      throw error;
-    }
+  async listAllStocks(): Promise<StockModelDB[]> {
+    this.logger.verbose(`Listing all stocks`);
+    const stocks = await this.listAllStocksService.execute();
+    return stocks;
   }
 }

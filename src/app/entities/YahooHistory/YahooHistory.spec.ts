@@ -1,18 +1,18 @@
-import { YahooStockHistory } from "./YahooHistory.entity";
+import { YahooStockHistory } from './YahooHistory.entity';
 
-describe("YahooStockHistory", () => {
-  describe("constructor", () => {
-    it("should create an instance with provided data", () => {
+describe('YahooStockHistory', () => {
+  describe('constructor', () => {
+    it('should create an instance with provided data', () => {
       // Arrange
       const testData: Partial<YahooStockHistory> = {
-        date: new Date("2023-09-08"),
+        date: new Date('2023-09-08'),
         open: 150,
         high: 155,
         low: 145,
         close: 154,
         adjClose: 154,
         volume: 100000,
-        stockCode: "YHOO",
+        stockCode: 'YHOO',
       };
 
       // Act
@@ -23,29 +23,29 @@ describe("YahooStockHistory", () => {
     });
   });
 
-  describe("fromAbstract", () => {
-    it("should parse abstract data and create an instance", () => {
+  describe('fromAbstract', () => {
+    it('should parse abstract data and create an instance', () => {
       // Arrange
       const abstractData = {
-        date: "2023-09-08",
-        open: "150",
-        high: "155",
-        low: "145",
-        close: "154",
-        adjClose: "154",
-        volume: "100000",
-        stockCode: "YHOO",
+        date: '2023-09-08',
+        open: '150',
+        high: '155',
+        low: '145',
+        close: '154',
+        adjClose: '154',
+        volume: '100000',
+        stockCode: 'YHOO',
       };
 
       const expectedData: YahooStockHistory = {
-        date: new Date("2023-09-08"),
+        date: new Date('2023-09-08'),
         open: 150,
         high: 155,
         low: 145,
         close: 154,
         adjClose: 154,
         volume: 100000,
-        stockCode: "YHOO",
+        stockCode: 'YHOO',
       };
 
       // Act
@@ -57,7 +57,7 @@ describe("YahooStockHistory", () => {
         expect.objectContaining({
           ...expectedData,
           date: expect.any(Date), // Expecting any Date object
-        })
+        }),
       );
     });
   });

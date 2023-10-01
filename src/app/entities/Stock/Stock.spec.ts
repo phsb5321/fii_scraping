@@ -1,9 +1,9 @@
-import { Stock } from "./Stock.entity";
+import { Stock } from './Stock.entity';
 
-describe("Stock", () => {
+describe('Stock', () => {
   // Testing the constructor
-  describe("constructor", () => {
-    it("should create an instance without parameters", () => {
+  describe('constructor', () => {
+    it('should create an instance without parameters', () => {
       // Arrange & Act
       const stock = new Stock();
 
@@ -14,7 +14,7 @@ describe("Stock", () => {
       expect(stock.marketIndicator).toBeUndefined();
     });
 
-    it("should create an instance with parameters", () => {
+    it('should create an instance with parameters', () => {
       // Arrange
       const testDate = new Date();
       const testType = 1;
@@ -35,13 +35,13 @@ describe("Stock", () => {
   });
 
   // Testing the fromAbstract method
-  describe("fromAbstract", () => {
-    it("should create an instance from an abstract object with dateListing", () => {
+  describe('fromAbstract', () => {
+    it('should create an instance from an abstract object with dateListing', () => {
       // Arrange
       const object = {
-        dateListing: "01/02/2023",
-        type: "1",
-        marketIndicator: "100",
+        dateListing: '01/02/2023',
+        type: '1',
+        marketIndicator: '100',
       };
 
       // Act
@@ -55,11 +55,11 @@ describe("Stock", () => {
       expect(stock.marketIndicator).toEqual(100);
     });
 
-    it("should create an instance from an abstract object without dateListing", () => {
+    it('should create an instance from an abstract object without dateListing', () => {
       // Arrange
       const object = {
-        type: "1",
-        marketIndicator: "100",
+        type: '1',
+        marketIndicator: '100',
       };
 
       // Act

@@ -9,38 +9,30 @@
  * services, and providers in their respective arrays.
  */
 
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
-import { StockCodeModelDB } from "@/modules/b3/models/StockCode.model";
-import { YahooQueueController } from "@/modules/yahoo/controllers/yahoo-queue-controller/yahoo-queue-controller.controller";
-import { YahooDividendHistoryModelDB } from "@/modules/yahoo/models/YahooDividendHistory.model";
-import { YahooHistoryModelDB } from "@/modules/yahoo/models/YahooHistory.model";
-import { YahooCrawlerProvider } from "@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider";
-import { YahooService } from "@/modules/yahoo/services/yahoo.service";
-import { UpdateYahooStockDividendsService } from "@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service";
-import { UpdateYahooStockHistoryService } from "@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service";
-import { BullModule } from "@nestjs/bull";
-import { Module } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { StockModelDB } from '@/app/models/Stock.model';
+import { StockCodeModelDB } from '@/app/models/StockCode.model';
+import { YahooDividendHistoryModelDB } from '@/app/models/YahooDividendHistory.model';
+import { YahooHistoryModelDB } from '@/app/models/YahooHistory.model';
+import { YahooController } from '@/modules/yahoo/controllers/yahoo-controller/yahoo-controller.controller';
+import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import { YahooService } from '@/modules/yahoo/services/yahoo.service';
+import { ExtractStockHistoryService } from '@/modules/yahoo/usecases/extract-stock-history/extract-stock-history.service';
+import { UpdateYahooStockDividendsService } from '@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service';
+import { UpdateYahooStockHistoryService } from '@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      StockModelDB,
-      StockCodeModelDB,
-      YahooHistoryModelDB,
-      YahooDividendHistoryModelDB,
-    ]),
-
-    BullModule.registerQueue({
-      name: "yahoo-stocks-queue",
-    }),
+    TypeOrmModule.forFeature([StockModelDB, StockCodeModelDB, YahooHistoryModelDB, YahooDividendHistoryModelDB]),
   ],
   providers: [
     YahooService,
     YahooCrawlerProvider,
     UpdateYahooStockHistoryService,
     UpdateYahooStockDividendsService,
+    ExtractStockHistoryService,
   ],
-  controllers: [YahooQueueController],
+  controllers: [YahooController],
 })
 export class YahooModule {}

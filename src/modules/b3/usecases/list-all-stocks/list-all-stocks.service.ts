@@ -1,8 +1,7 @@
-import { Repository } from "typeorm";
-
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
-import { Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { StockModelDB } from '@/app/models/Stock.model';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 /**
  * ListAllStocksService is a service responsible for fetching all stock data from the database.
@@ -19,7 +18,7 @@ export class ListAllStocksService {
    */
   constructor(
     @InjectRepository(StockModelDB)
-    private readonly stockModelRepository: Repository<StockModelDB>
+    private readonly stockModelRepository: Repository<StockModelDB>,
   ) {}
 
   /**

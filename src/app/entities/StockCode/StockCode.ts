@@ -29,7 +29,7 @@ export class StockCode {
   public static fromAbstract(object: { [key: string]: any }): StockCode {
     const { code, isin } = object;
     if (!code || !isin) {
-      throw new Error("Required fields `code` and `isin` are missing");
+      throw new Error('Required fields `code` and `isin` are missing');
     }
     return new StockCode({ code, isin });
   }

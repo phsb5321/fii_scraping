@@ -1,10 +1,10 @@
-import { In, Repository } from "typeorm";
+import { In, Repository } from 'typeorm';
 
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
-import { YahooHistoryModelDB } from "@/modules/yahoo/models/YahooHistory.model";
-import { YahooCrawlerProvider } from "@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider";
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { StockModelDB } from '@/app/models/Stock.model';
+import { YahooHistoryModelDB } from '@/app/models/YahooHistory.model';
+import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UpdateYahooStockHistoryService {
@@ -18,7 +18,7 @@ export class UpdateYahooStockHistoryService {
     private readonly stockModelDB: Repository<StockModelDB>,
 
     @Inject(YahooCrawlerProvider)
-    private readonly yahooCrawlerProvider: YahooCrawlerProvider
+    private readonly yahooCrawlerProvider: YahooCrawlerProvider,
   ) {}
 
   /**
@@ -33,7 +33,7 @@ export class UpdateYahooStockHistoryService {
     });
 
     if (!stocks.length) {
-      this.logger.warn("No stock codes found");
+      this.logger.warn('No stock codes found');
       return [];
     }
 
@@ -49,30 +49,20 @@ export class UpdateYahooStockHistoryService {
    * @param stocks - List of stocks to fetch histories for.
    * @returns Array of updated stock histories.
    */
-  private async fetchAndSaveStockHistories(
-    stocks: StockModelDB[]
-  ): Promise<YahooHistoryModelDB[]> {
-    const historiesPromises = stocks.map(async (stock) => {
-      const YahooStockHistory =
-        await this.yahooCrawlerProvider.getStockTradeHistory(
-          `${stock.code}.SA`
-        );
+  private async fetchAndSaveStockHistories(stocks: StockModelDB[]): Promise<YahooHistoryModelDB[]> {
+    const historiesPromises = stocks.map(async stock => {
+      const YahooStockHistory = await this.yahooCrawlerProvider.getStockTradeHistory(`${stock.code}.SA`);
 
       if (!YahooStockHistory || YahooStockHistory.length === 0) return null;
 
-      this.logger.verbose(
-        `Stock ${stock.code}.SA has ${YahooStockHistory.length} days of history`
-      );
+      this.logger.verbose(`Stock ${stock.code}.SA has ${YahooStockHistory.length} days of history`);
 
       const sortedStockHistory = this.stableSort(YahooStockHistory, (a, b) => {
         if (!a.date || !b.date) return 0;
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
 
-      const savedHistory = await this.yahooHistoryModelDB.upsert(
-        sortedStockHistory,
-        ["stockId", "date"]
-      );
+      const savedHistory = await this.yahooHistoryModelDB.upsert(sortedStockHistory, ['stockId', 'date']);
       return this.yahooHistoryModelDB.save(savedHistory.generatedMaps);
     });
 

@@ -1,9 +1,9 @@
-import { YahooDividend } from "./Dividend.entity";
+import { YahooDividend } from './Dividend.entity';
 
-describe("YahooDividend", () => {
+describe('YahooDividend', () => {
   // Testing the constructor
-  describe("constructor", () => {
-    it("should create an instance without parameters", () => {
+  describe('constructor', () => {
+    it('should create an instance without parameters', () => {
       // Arrange & Act
       const dividend = new YahooDividend();
 
@@ -13,7 +13,7 @@ describe("YahooDividend", () => {
       expect(dividend.dividend).toBeUndefined();
     });
 
-    it("should create an instance with parameters", () => {
+    it('should create an instance with parameters', () => {
       // Arrange
       const testDate = new Date();
       const testDividend = 5;
@@ -31,11 +31,11 @@ describe("YahooDividend", () => {
   });
 
   // Testing the fromAbstract method
-  describe("fromAbstract", () => {
-    it("should create an instance from an abstract object with date", () => {
+  describe('fromAbstract', () => {
+    it('should create an instance from an abstract object with date', () => {
       // Arrange
       const object = {
-        date: "01/02/2023",
+        date: '01/02/2023',
         dividend: 10,
       };
 
@@ -43,11 +43,11 @@ describe("YahooDividend", () => {
       const dividend = YahooDividend.fromAbstract(object);
 
       // Assert
-      expect(dividend.date).toEqual(new Date("2023-02-01"));
+      expect(dividend.date).toEqual(new Date('2023-02-01'));
       expect(dividend.dividend).toEqual(10);
     });
 
-    it("should create an instance from an abstract object without date", () => {
+    it('should create an instance from an abstract object without date', () => {
       // Arrange
       const object = {
         dividend: 10,

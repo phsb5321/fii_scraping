@@ -1,65 +1,36 @@
-import { Job } from "bull";
-
-import LogMethod from "@/app/utils/LogMethod";
-import { YahooDividendHistoryModelDB } from "@/modules/yahoo/models/YahooDividendHistory.model";
-import { YahooHistoryModelDB } from "@/modules/yahoo/models/YahooHistory.model";
-import { UpdateYahooStockDividendsService } from "@/modules/yahoo/usecases/update-yahoo-stock-dividends/update-yahoo-stock-dividends.service";
-import { UpdateYahooStockHistoryService } from "@/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service";
-import { Process } from "@nestjs/bull";
+import { EventConfigs } from "@/app/utils/EventConfigs";
+import { ExtractStockHistoryService } from "@/modules/yahoo/usecases/extract-stock-history/extract-stock-history.service";
 import { Injectable, Logger } from "@nestjs/common";
+import { EventEmitter2, OnEvent } from "@nestjs/event-emitter";
 
-/**
- * Service responsible for managing and updating Yahoo stock data.
- */
 @Injectable()
 export class YahooService {
   private readonly logger = new Logger(YahooService.name);
 
   constructor(
-    private readonly updateStockHistorySvc: UpdateYahooStockHistoryService,
-    private readonly updateStockDividendsSvc: UpdateYahooStockDividendsService
+    private readonly extractStockHistoryService: ExtractStockHistoryService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  /**
-   * Update stock's history and dividends.
-   *
-   * @param stockCode The stock code for the update.
-   * @returns Updated history and dividends data.
-   */
-  @LogMethod(new Logger(YahooService.name))
-  async updateStocks(
-    stockCode: number
-  ): Promise<[YahooHistoryModelDB[], YahooDividendHistoryModelDB[]]> {
-    try {
-      return await Promise.all([
-        this.updateStockHistorySvc.execute([stockCode]),
-        this.updateStockDividendsSvc.execute([stockCode]),
-      ]);
-    } catch (error) {
-      const statusCode = error.message.match(/\d+/g)?.[0] || "Unknown";
-      this.logger.error(`${statusCode} | Error updating stock ${stockCode}`);
-      return [[], []];
-    }
-  }
+  @OnEvent(EventConfigs.UPDATE_YAHOO_STOCK)
+  async handleUpdateMultipleStocks(): Promise<void> {
+    this.logger.verbose("Received event to update multiple stocks");
 
-  /**
-   * Handle Bull queue job for updating a Yahoo stock.
-   *
-   * @param job The Bull job instance.
-   */
-  @Process("update-yahoo-stock")
-  async handleUpdateYahooStock(job: Job<{ stockCode: number }>): Promise<void> {
     try {
-      await this.updateStocks(job.data.stockCode);
-      this.logger.verbose(
-        `Handled job ${job.id} for stock ${job.data.stockCode}`
-      );
+      const stocks = await this.extractStockHistoryService.execute();
+      if (!stocks.length) {
+        this.logger.warn("No stocks found");
+        return;
+      }
+
+      this.logger.verbose(`Successfully updated ${stocks.length} stocks`);
+      this.eventEmitter.emit("updatedMultipleYahooStocks", stocks);
     } catch (error) {
-      this.logger.error(
-        `Error in job ${job.id} for stock ${job.data.stockCode}`,
-        error.stack
+      this.logger.error("Error updating stocks", error.stack);
+      this.eventEmitter.emit(
+        "updateMultipleYahooStocks.failure",
+        error.message,
       );
-      throw error;
     }
   }
 }

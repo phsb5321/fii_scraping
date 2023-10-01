@@ -23,15 +23,15 @@ export class YahooStockHistory {
     return new YahooStockHistory(
       Object.entries({ ...rest, stockCode }).reduce(
         (acc, [key, value]) => {
-          if (key !== "date") {
+          if (key !== 'date') {
             acc[key] = isNaN(Number(value)) ? value : Number(value);
           }
           return acc;
         },
         {
           date: new Date(`${year}-${month}-${day}T00:00:00Z`), // Create the Date object in UTC
-        } as Partial<YahooStockHistory>
-      )
+        } as Partial<YahooStockHistory>,
+      ),
     );
   }
 }

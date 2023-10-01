@@ -16,15 +16,20 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
+
   },
   "_moduleAliases": {
     "@": "src"
   },
   "dependencies": {
+    "@bull-board/api": "^5.8.4",
+    "@bull-board/express": "^5.8.4",
+    "@bull-board/nestjs": "^5.8.4",
     "@nestjs/bull": "^10.0.1",
     "@nestjs/common": "^10.2.6",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.2.6",
+    "@nestjs/event-emitter": "^2.0.2",
     "@nestjs/mapped-types": "^2.0.2",
     "@nestjs/platform-express": "^10.2.6",
     "@nestjs/schedule": "^3.0.4",

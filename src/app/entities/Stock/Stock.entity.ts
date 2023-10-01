@@ -1,4 +1,12 @@
 /**
+ * Represents other codes related to a stock, such as ISIN.
+ */
+export type OtherCode = {
+  code?: string;
+  isin?: string;
+};
+
+/**
  * Stock represents a company's stock details.
  * Includes details like company name, trading name, industry classification, etc.
  * Also provides methods to generate a stock instance from abstract data.
@@ -25,7 +33,7 @@ export class Stock {
   institutionCommon?: string;
   institutionPreferred?: string;
   code?: string;
-  otherCodes?: { code?: string; isin?: string }[];
+  otherCodes?: OtherCode[];
   hasEmissions?: boolean;
   hasBDR?: boolean;
   describleCategoryBVMF?: string | null;
@@ -52,7 +60,7 @@ export class Stock {
   private static parseDate(dateString?: string): Date | undefined {
     if (!dateString) return;
 
-    const [day, month, year] = dateString.split("/");
+    const [day, month, year] = dateString.split('/');
     return new Date(Date.UTC(+year, +month - 1, +day)); // Use UTC time
   }
 }

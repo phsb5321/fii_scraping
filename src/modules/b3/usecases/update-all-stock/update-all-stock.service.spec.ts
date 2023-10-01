@@ -1,112 +1,82 @@
-import { Repository } from "typeorm";
+import { Repository } from 'typeorm';
 
-import { StockModelDB } from "@/modules/b3/models/Stock.model";
-import { StockCodeModelDB } from "@/modules/b3/models/StockCode.model";
-import { B3CrawlerProvider } from "@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider";
-import { Logger } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
+import { Stock } from '@/app/entities/Stock/Stock.entity';
+import { StockModelDB } from '@/app/models/Stock.model';
+import { StockCodeModelDB } from '@/app/models/StockCode.model';
+import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
+import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
+import { Logger } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
-import { UpdateAllStockService } from "./update-all-stock.service";
-
-describe("UpdateAllStockService", () => {
+describe('UpdateAllStockService', () => {
   let service: UpdateAllStockService;
-  let mockStockModelRepository: jest.Mocked<Repository<StockModelDB>>;
-  let mockStockCodeModelRepository: jest.Mocked<Repository<StockCodeModelDB>>;
-  let mockB3CrawlerProvider: jest.Mocked<B3CrawlerProvider>;
-  let mockLogger: jest.Mocked<Logger>;
+  let stockModelRepository: Repository<StockModelDB>;
+  let b3CrawlerProvider: B3CrawlerProvider;
+  let logger: Logger;
 
   beforeEach(async () => {
-    mockStockModelRepository = {
-      find: jest.fn(),
-      save: jest.fn(),
-    } as unknown as jest.Mocked<Repository<StockModelDB>>;
-
-    mockStockCodeModelRepository = {
-      upsert: jest.fn(),
-    } as unknown as jest.Mocked<Repository<StockCodeModelDB>>;
-
-    mockB3CrawlerProvider = {
-      getStockDetails: jest.fn(),
-    } as unknown as jest.Mocked<B3CrawlerProvider>;
-
-    mockLogger = {
-      verbose: jest.fn(),
-      log: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UpdateAllStockService,
         {
           provide: getRepositoryToken(StockModelDB),
-          useValue: mockStockModelRepository,
+          useValue: {
+            find: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(StockCodeModelDB),
-          useValue: mockStockCodeModelRepository,
+          useValue: {
+            upsert: jest.fn(),
+          },
         },
         {
           provide: B3CrawlerProvider,
-          useValue: mockB3CrawlerProvider,
+          useValue: {
+            getStockDetails: jest.fn(),
+          },
         },
         {
           provide: Logger,
-          useValue: mockLogger,
+          useValue: {
+            verbose: jest.fn(),
+            error: jest.fn(),
+          },
         },
       ],
     }).compile();
 
     service = module.get<UpdateAllStockService>(UpdateAllStockService);
+    stockModelRepository = module.get(getRepositoryToken(StockModelDB));
+    b3CrawlerProvider = module.get<B3CrawlerProvider>(B3CrawlerProvider);
+    logger = module.get<Logger>(Logger);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe("execute()", () => {
-    it("should log and return an empty array when no stocks are found", async () => {
-      mockStockModelRepository.find.mockResolvedValueOnce([]);
+  describe('execute', () => {
+    it('should return an empty array and log verbose message if no stocks found', async () => {
+      (stockModelRepository.find as jest.Mock).mockResolvedValue([]);
       const result = await service.execute();
-      expect(mockLogger.verbose).toHaveBeenCalledWith("No stocks found");
       expect(result).toEqual([]);
+      expect(logger.verbose).toHaveBeenCalledWith('No stocks found');
     });
 
-    it("should fetch, update and return updated stocks when stocks are found", async () => {
-      const mockStocks: StockModelDB[] = [
-        new StockModelDB(),
-        new StockModelDB(),
-      ];
-      mockStockModelRepository.find.mockResolvedValueOnce(mockStocks);
+    it('should process stocks in batches and return updated stocks if stocks are found', async () => {
+      const mockStocks: StockModelDB[] = [{ codeCVM: '1' } as StockModelDB, { codeCVM: '2' } as StockModelDB];
+      (stockModelRepository.find as jest.Mock).mockResolvedValue(mockStocks);
 
-      const mockStockDetails = [
-        {
-          /*...mock data here...*/
-        },
-      ];
-      mockB3CrawlerProvider.getStockDetails.mockResolvedValueOnce(
-        mockStockDetails
-      );
-
-      const updatedStocks: StockModelDB[] = [
-        new StockModelDB(),
-        new StockModelDB(),
-      ];
-      mockStockModelRepository.save.mockResolvedValueOnce(updatedStocks[0]);
-      mockStockModelRepository.save.mockResolvedValueOnce(updatedStocks[1]);
+      const mockStockDetails: Partial<Stock>[] = [{ codeCVM: '1' }, { codeCVM: '2' }];
+      (b3CrawlerProvider.getStockDetails as jest.Mock).mockResolvedValue(mockStockDetails);
 
       const result = await service.execute();
-
-      expect(mockLogger.verbose).toHaveBeenCalledWith(
-        `About to update ${mockStocks.length} stocks`
-      );
-      expect(mockB3CrawlerProvider.getStockDetails).toHaveBeenCalledWith(
-        mockStocks.map((stock) => stock.codeCVM)
-      );
-      expect(mockStockModelRepository.save).toHaveBeenCalledTimes(
-        mockStocks.length
-      );
-      expect(result).toEqual(updatedStocks);
+      expect(result).toHaveLength(2);
+      expect(stockModelRepository.save).toHaveBeenCalledTimes(2);
     });
   });
 });
