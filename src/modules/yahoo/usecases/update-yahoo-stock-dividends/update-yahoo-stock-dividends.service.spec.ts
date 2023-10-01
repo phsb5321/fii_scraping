@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UpdateYahooStockDividendsService } from './update-yahoo-stock-dividends.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { YahooDividendHistoryModelDB } from '@/modules/yahoo/models/YahooDividendHistory.model';
+import { StockModelDB } from '@/app/models/Stock.model';
+import { YahooDividendHistoryModelDB } from '@/app/models/YahooDividendHistory.model';
 import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { UpdateYahooStockDividendsService } from './update-yahoo-stock-dividends.service';
 
 describe('UpdateYahooStockDividendsService', () => {
   let service: UpdateYahooStockDividendsService;

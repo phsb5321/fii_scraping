@@ -1,4 +1,8 @@
-export interface YahooStockHIstoryI {
+/**
+ * A class that implements the YahooStockHistoryI interface.
+ * Provides utility methods to create instances from abstract data.
+ */
+export class YahooStockHistory {
   date: Date;
   open: number;
   high: number;
@@ -6,38 +10,28 @@ export interface YahooStockHIstoryI {
   close: number;
   adjClose: number;
   volume: number;
-
-  stockCode?: string;
-}
-
-export class YahooStockHIstory implements YahooStockHIstoryI {
-  date: Date;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  adjClose: number;
-  volume: number;
-
   stockCode?: string;
 
-  constructor(object: YahooStockHIstoryI) {
-    Object.assign(this, { ...object });
+  constructor(data: Partial<YahooStockHistory>) {
+    Object.assign(this, data);
   }
 
-  static fromAbstract(object: { [key: string]: string }): YahooStockHIstory {
+  static fromAbstract(object: { [key: string]: string }): YahooStockHistory {
     const { date, stockCode, ...rest } = object;
     const [year, month, day] = date.split(/[-/]/);
 
-    const parsedNumbers = Object.keys(rest).reduce((acc, key) => {
-      acc[key] = +rest[key];
-      return acc;
-    }, {} as { [key: string]: number });
-
-    return {
-      ...parsedNumbers,
-      date: new Date(+year, +month - 1, +day),
-      stockCode,
-    } as YahooStockHIstory;
+    return new YahooStockHistory(
+      Object.entries({ ...rest, stockCode }).reduce(
+        (acc, [key, value]) => {
+          if (key !== 'date') {
+            acc[key] = isNaN(Number(value)) ? value : Number(value);
+          }
+          return acc;
+        },
+        {
+          date: new Date(`${year}-${month}-${day}T00:00:00Z`), // Create the Date object in UTC
+        } as Partial<YahooStockHistory>,
+      ),
+    );
   }
 }

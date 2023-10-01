@@ -1,5 +1,5 @@
 # Docker Compose file for running an application stack with Nest.js, MySQL, and Redis
-version: '3.8'
+version: "3.9"
 
 services:
   # Nest.js application service
@@ -10,9 +10,9 @@ services:
     volumes:
       - .:/app # Mount the current directory on the host to /app in the container
     ports:
-      - 4000:3000 # Map the host port 3000 to the container port 3000
+      - 3000:3000 # Map the host port 3000 to the container port 3000
       - 3500:3500 # Map the host port 3500 to the container port 3500
-    command: sh -c "npm install && npm run start:dev" # Install dependencies and start the app in development mode
+    command: sh -c "npm install -g pnpm && pnpm install && pnpm run start:dev"
     depends_on:
       - db # Ensure the db service is started before the app service
     networks:
@@ -23,23 +23,37 @@ services:
     image: mysql # Use the MySQL image
     container_name: mysql # Name of the container
     command: --default-authentication-plugin=mysql_native_password # Set the default authentication plugin (not recommended for production)
-    restart: 'on-failure' # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
+    restart: "on-failure" # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
     environment:
-      MYSQL_ROOT_PASSWORD: example # Set the MySQL root password
-      MYSQL_DATABASE: fii_scrapping # Set the MySQL database name
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
       - 3306:3306 # Map the host port 3306 to the container port 3306
     networks:
       - db # Connect the db service to the db network
 
+  # MySQL database service for integration tests
+  test_db:
+    image: mysql
+    container_name: mysql_test
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - 3307:3306 # Map a different host port to avoid conflict with the development DB service
+    networks:
+      - db_test
+
+
   # Redis cache service
   cache:
     image: redis/redis-stack:latest # Use the Redis image
     container_name: redis # Name of the container
-    restart: 'on-failure' # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
+    restart: "on-failure" # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
     ports:
-      - '6379:6379' # Map the host port 6379 to the container port 6379
-      - '8001:8001' # Map the host port 8001 to the container port 8001
+      - "6379:6379" # Map the host port 6379 to the container port 6379
+      - "8001:8001" # Map the host port 8001 to the container port 8001
     command: redis-server --requirepass example # Set the Redis password
     volumes:
       - cache:/data # Mount the named volume "cache" to /data in the container
@@ -50,6 +64,9 @@ services:
 networks:
   db:
     driver: bridge # Use the bridge network driver for the db network
+  db_test:
+    driver: bridge
+
 
 # Volumes used in the services
 volumes:

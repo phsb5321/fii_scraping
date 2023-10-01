@@ -1,44 +1,35 @@
-// src/modules/yahoo/usecases/update-yahoo-stock-history/update-yahoo-stock-history.service.ts
-
 import { In, Repository } from 'typeorm';
 
-import { StockModelDB } from '@/modules/b3/models/Stock.model';
-import { YahooHistoryModelDB } from '@/modules/yahoo/models/YahooHistory.model';
+import { StockModelDB } from '@/app/models/Stock.model';
+import { YahooHistoryModelDB } from '@/app/models/YahooHistory.model';
 import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
-import { Processor } from '@nestjs/bull';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-/**
- * UpdateYahooStockHistoryService is a class responsible for updating the stock history
- * using data from Yahoo Finance. It fetches the stock history and saves it to the database.
- * This service can be executed for specific stocks or all stocks in the database.
- */
-@Processor('stocks-queue')
 @Injectable()
 export class UpdateYahooStockHistoryService {
   private readonly logger = new Logger(UpdateYahooStockHistoryService.name);
 
   constructor(
     @InjectRepository(YahooHistoryModelDB)
-    private yahooHistoryModelDB: Repository<YahooHistoryModelDB>,
+    private readonly yahooHistoryModelDB: Repository<YahooHistoryModelDB>,
 
     @InjectRepository(StockModelDB)
-    private stockModelDB: Repository<StockModelDB>,
+    private readonly stockModelDB: Repository<StockModelDB>,
 
     @Inject(YahooCrawlerProvider)
-    private yahooCrawlerProvider: YahooCrawlerProvider,
-  ) { }
+    private readonly yahooCrawlerProvider: YahooCrawlerProvider,
+  ) {}
 
   /**
-   * Executes the service to update the stock history for the specified stocks or all stocks.
-   * @param {number[] | undefined} stockCodeLIst - Optional array of stock IDs to update.
-   * @returns {Promise<YahooHistoryModelDB[]>} The updated stock history data.
+   * Executes the service, updating stock history for specific or all stocks.
+   *
+   * @param stockCodeList - (Optional) Array of stock codes to update.
+   * @returns Updated stock history data.
    */
-  async execute(stockCodeLIst: number[]): Promise<YahooHistoryModelDB[]> {
-    // Find stock codes for the specified stocks or all stocks
+  async execute(stockCodeList?: number[]): Promise<YahooHistoryModelDB[]> {
     const stocks = await this.stockModelDB.find({
-      where: { code: In(stockCodeLIst) },
+      where: { code: In(stockCodeList || []) },
     });
 
     if (!stocks.length) {
@@ -46,46 +37,52 @@ export class UpdateYahooStockHistoryService {
       return [];
     }
 
-    // Fetch stock history for each stock code and save it to the database
-    const stocksHistory = await Promise.all(
-      stocks.map(async ({ code }) => {
-        const stockDotSa = code + '.SA';
+    const stocksHistory = await this.fetchAndSaveStockHistories(stocks);
 
-        // Fetch stock history from Yahoo Finance
-        const yahooStockHistory =
-          await this.yahooCrawlerProvider.getStockTradeHistory(stockDotSa);
+    this.logger.verbose(`Saved ${stocksHistory.length} stock history records`);
+    return stocksHistory;
+  }
 
-        if (!yahooStockHistory) return [];
+  /**
+   * Fetches stock histories from Yahoo and saves them.
+   *
+   * @param stocks - List of stocks to fetch histories for.
+   * @returns Array of updated stock histories.
+   */
+  private async fetchAndSaveStockHistories(stocks: StockModelDB[]): Promise<YahooHistoryModelDB[]> {
+    const historiesPromises = stocks.map(async stock => {
+      const YahooStockHistory = await this.yahooCrawlerProvider.getStockTradeHistory(`${stock.code}.SA`);
 
-        // Log the length of the stock history
-        this.logger.verbose(
-          `Stock ${stockDotSa} has ${yahooStockHistory.length} days of history`,
-        );
+      if (!YahooStockHistory || YahooStockHistory.length === 0) return null;
 
-        // Sort the stock history by date
-        yahooStockHistory.sort((a, b) => {
-          if (a.date > b.date) return 1;
-          if (a.date < b.date) return -1;
-          return 0;
-        });
+      this.logger.verbose(`Stock ${stock.code}.SA has ${YahooStockHistory.length} days of history`);
 
-        // Save the stock history to the database
-        const yahooStockHistorySaved = await this.yahooHistoryModelDB.upsert(
-          yahooStockHistory,
-          ['stockId', 'date'],
-        );
+      const sortedStockHistory = this.stableSort(YahooStockHistory, (a, b) => {
+        if (!a.date || !b.date) return 0;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
 
-        return (await this.yahooHistoryModelDB.save(
-          yahooStockHistorySaved.generatedMaps,
-        )) as YahooHistoryModelDB[];
-      }),
-    );
+      const savedHistory = await this.yahooHistoryModelDB.upsert(sortedStockHistory, ['stockId', 'date']);
+      return this.yahooHistoryModelDB.save(savedHistory.generatedMaps);
+    });
 
-    // Log the number of stock history records saved
-    this.logger.verbose(
-      `Saved ${stocksHistory.flat().length} stock history records`,
-    );
+    const histories = await Promise.all(historiesPromises);
+    return histories.flat().filter(Boolean);
+  }
 
-    return stocksHistory.flat();
+  /**
+   * Stable sorts an array based on the provided comparator.
+   *
+   * @param arr - The array to be sorted.
+   * @param comparator - Comparator function for sorting.
+   * @returns A new sorted array.
+   */
+  private stableSort<T>(arr: T[], comparator: (a: T, b: T) => number): T[] {
+    const indexedArr = arr.map((elem, index) => ({ elem, index }));
+    indexedArr.sort((a, b) => {
+      const cmp = comparator(a.elem, b.elem);
+      return cmp !== 0 ? cmp : a.index - b.index;
+    });
+    return indexedArr.map(({ elem }) => elem);
   }
 }

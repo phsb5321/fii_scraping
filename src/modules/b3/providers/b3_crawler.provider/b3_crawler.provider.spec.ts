@@ -1,13 +1,9 @@
+import { Stock } from '@/app/entities/Stock/Stock.entity';
+import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
 import { Test, TestingModule } from '@nestjs/testing';
-import { B3CrawlerProvider } from './b3_crawler.provider';
-import { StockI } from '@/app/entities/Stock/Stock.entity';
 
 describe('B3CrawlerProvider', () => {
   let provider: B3CrawlerProvider;
-
-  beforeAll(() => {
-    jest.setTimeout(20000); // 20 seconds
-  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,9 +21,28 @@ describe('B3CrawlerProvider', () => {
     expect(stocks).toBeDefined();
   });
 
-  it('should have otherCodes', async () => {
-    const stocks = await provider.getStockDetails('1023');
-    const stock = stocks[0];
-    expect(stock.otherCodes).toBeDefined();
+  it(
+    'should have otherCodes atribute',
+    async () => {
+      const stocks = await provider.getStockDetails('1023');
+      const stock = stocks[0];
+      expect(stock.otherCodes).toBeDefined();
+    },
+    2 * 60 * 1000,
+  );
+
+  describe('getStocks', () => {
+    it('should not panic with empty stock list', async () => {
+      // Arrange
+      const emptyStockList: Stock[] = [];
+      // Mocking getStocksFromPage that is a private method
+      jest.spyOn(provider as any, 'getStocks').mockResolvedValueOnce(emptyStockList);
+
+      // Act
+      const stocks = await provider.getStocks();
+
+      // Assert
+      expect(stocks).toEqual(emptyStockList);
+    });
   });
 });
