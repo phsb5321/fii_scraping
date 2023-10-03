@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 
-import { Stock } from '@/app/entities/Stock/Stock.entity';
+import { CompanyEntity } from '@/app/entities/Company/Company.entity';
+import { StockEntity } from '@/app/entities/Stock/Stock.entity';
 import { Injectable } from '@nestjs/common';
 
 // Types
@@ -55,7 +56,7 @@ export class B3CrawlerProvider {
   /**
    * Fetches all the available stocks and their respective details.
    */
-  public async getStocks(): Promise<Stock[]> {
+  public async getStocks(): Promise<CompanyEntity[]> {
     const firstPage = await this.fetchStocks(DEFAULT_PAGINATION, this.b3Endpoints.list);
 
     const remainingPages = await Promise.all(
@@ -67,19 +68,21 @@ export class B3CrawlerProvider {
     // Flatten all stock results
     const allStocks = [firstPage, ...remainingPages].flatMap(page => page.results);
 
-    return allStocks.map(stock => Stock.fromAbstract(stock));
+    return allStocks.map(stock => new CompanyEntity(stock as unknown as CompanyEntity));
   }
 
   /**
    * Provides a method to retrieve details of a stock from B3 by its codeCVM.
    */
-  public async getStockDetails(codeCVM: string | string[]): Promise<Stock[]> {
+  public async getStockDetails(codeCVM: string | string[]): Promise<StockEntity[]> {
     const stocks = Array.isArray(codeCVM) ? codeCVM : [codeCVM];
 
     const stockDetails = await Promise.all(
-      stocks.map(code => this.fetchStocks({ language: 'pt-br', codeCVM: code }, this.b3Endpoints.details)),
+      stocks
+        .map(code => this.fetchStocks({ language: 'pt-br', codeCVM: code }, this.b3Endpoints.details))
+        .filter(Boolean),
     );
 
-    return stockDetails.map(stock => new Stock(stock as Stock));
+    return stockDetails.map(stock => new StockEntity(stock as StockEntity));
   }
 }

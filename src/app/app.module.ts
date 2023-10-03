@@ -6,7 +6,6 @@ import { ConfigModule } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 // Define the main application module
 @Module({
@@ -23,21 +22,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     // Import the Nest.js configuration module for loading environment variables
     ConfigModule.forRoot({
       envFilePath: ['.env'],
-    }),
-
-    // Import the TypeOrm module for database connection and configuration
-    TypeOrmModule.forRoot({
-      type: 'mysql', // Database type
-      host: process.env.MYSQL_HOST, // Database host
-      port: 3306, // Database port
-      username: 'root', // Database username
-      password: process.env.MYSQL_ROOT_PASSWORD, // Database password
-      database: process.env.MYSQL_DATABASE, // Database name
-      autoLoadEntities: true, // Auto-load all entities
-      timezone: '-03:00', // Set Brazil timezone
-      dateStrings: true, // Enable date strings formatting
-      migrationsRun: true, // Run migrations automatically
-      synchronize: true, // Synchronize database schema with entities
     }),
 
     // Import Event Emitter module

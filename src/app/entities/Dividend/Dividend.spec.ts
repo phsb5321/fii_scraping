@@ -1,11 +1,11 @@
-import { YahooDividend } from './Dividend.entity';
+import { YahooDividendEntity } from './Dividend.entity';
 
 describe('YahooDividend', () => {
   // Testing the constructor
   describe('constructor', () => {
     it('should create an instance without parameters', () => {
       // Arrange & Act
-      const dividend = new YahooDividend();
+      const dividend = new YahooDividendEntity();
 
       // Assert
       expect(dividend).toBeDefined();
@@ -19,7 +19,7 @@ describe('YahooDividend', () => {
       const testDividend = 5;
 
       // Act
-      const dividend = new YahooDividend({
+      const dividend = new YahooDividendEntity({
         date: testDate,
         dividend: testDividend,
       });
@@ -40,7 +40,7 @@ describe('YahooDividend', () => {
       };
 
       // Act
-      const dividend = YahooDividend.fromAbstract(object);
+      const dividend = YahooDividendEntity.fromAbstract(object);
 
       // Assert
       expect(dividend.date).toEqual(new Date('2023-02-01'));
@@ -54,7 +54,7 @@ describe('YahooDividend', () => {
       };
 
       // Act
-      const dividend = YahooDividend.fromAbstract(object);
+      const dividend = YahooDividendEntity.fromAbstract(object);
 
       // Assert
       expect(dividend.date).toBeUndefined();

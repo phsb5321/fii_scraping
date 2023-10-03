@@ -1,7 +1,6 @@
-import { StockModelDB } from '@/app/models/Stock.model';
 import { EventConfigs } from '@/app/utils/EventConfigs';
 import { B3Service } from '@/modules/b3/services/b3.service';
-import { Controller, Get, Logger, Post } from '@nestjs/common';
+import { Controller, Logger, Post } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -40,13 +39,6 @@ export class B3Controller {
       });
       this.eventEmitter.emit(EventConfigs.SCRAPE_ALL_STOCKS_DETAILS);
     });
-  }
-
-  @Get('list-all-stocks')
-  @ApiOperation({ summary: 'List all stocks' })
-  @ApiResponse({ status: 200, description: 'The list of all stocks' })
-  async listAllStocks(): Promise<StockModelDB[]> {
-    return this.b3Service.listAllStocks();
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)

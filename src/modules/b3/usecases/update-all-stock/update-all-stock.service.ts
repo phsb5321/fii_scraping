@@ -1,142 +1,98 @@
-import { Repository } from "typeorm";
+import { OtherCode, StockEntity } from '@/app/entities/Stock/Stock.entity';
+import { StockCodeEntity } from '@/app/entities/StockCode/StockCode';
+import { PrismaService } from '@/app/infra/prisma/prisma.service';
+import { BatchProcessorService } from '@/app/utils/batch-processor/batch-processor.service';
+import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Stock } from '@prisma/client';
 
-import { OtherCode, Stock } from "@/app/entities/Stock/Stock.entity";
-import { StockModelDB } from "@/app/models/Stock.model";
-import { StockCodeModelDB } from "@/app/models/StockCode.model";
-import { B3CrawlerProvider } from "@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider";
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-
-/**
- * Service responsible for updating all stocks. It fetches updated stock information from
- * B3 Crawler and updates the stock information in the database accordingly.
- */
 @Injectable()
 export class UpdateAllStockService {
   private readonly logger = new Logger(UpdateAllStockService.name);
 
+  // Define default configurations
+  private readonly REQUESTS_LIMIT = 100;
+  private readonly BATCH_SIZE = 50;
+  private readonly TIME_FRAME_MULTIPLIER = 0.2 * 60 * 1000; // 0.2 minutes
+
   constructor(
-    @InjectRepository(StockModelDB)
-    private readonly stockModelRepository: Repository<StockModelDB>,
-    @InjectRepository(StockCodeModelDB)
-    private readonly stockCodeModelRepository: Repository<StockCodeModelDB>,
+    private readonly prisma: PrismaService,
     @Inject(B3CrawlerProvider)
     private readonly b3Crawler: B3CrawlerProvider,
+    private readonly batchProcessorService: BatchProcessorService,
   ) {}
 
-  /**
-   * Executes the update service. It fetches and updates stock details in the database.
-   * @returns An array of updated StockModelDB instances.
-   */
-  async execute(): Promise<StockModelDB[]> {
-    const stocks = await this.stockModelRepository.find({
-      select: ["codeCVM"],
-    });
-    if (!stocks.length) {
-      this.logger.verbose("No stocks found");
+  async execute(): Promise<Stock[]> {
+    const companies = await this.prisma.company.findMany({ select: { codeCVM: true } });
+
+    if (companies.length === 0) {
+      this.logger.verbose('No companies found');
       return [];
     }
-    this.logger.verbose(`Updating ${stocks.length} stocks`);
-    await this.processStocksInBatches(stocks.map((stock) => +stock.codeCVM));
-    return this.stockModelRepository.find();
-  }
 
-  private async processStocksInBatches(stockCodes: number[]): Promise<void> {
-    const [requestsLimit, batchSize] = [200, 100];
-    const timeFrame = (stockCodes.length / requestsLimit) * 0.5 * 60 * 1000; // 1 minute
-    const timeBetweenRequests =
-      timeFrame / Math.ceil(stockCodes.length / batchSize);
+    this.logger.verbose(`Updating stocks for ${companies.length} companies`);
 
-    const totalBatches = Math.ceil(stockCodes.length / batchSize);
-
-    // Calculate total time and log it
-    const totalTimeInMs = timeBetweenRequests * totalBatches;
-    const totalTimeInMin = totalTimeInMs / (60 * 1000); // Convert ms to minutes
-    this.logger.verbose(
-      `The process will take approximately ${totalTimeInMin.toFixed(
-        2,
-      )} minutes`,
+    await this.batchProcessorService.executeInBatches(
+      companies,
+      this.processBatch.bind(this),
+      this.REQUESTS_LIMIT,
+      this.BATCH_SIZE,
+      this.TIME_FRAME_MULTIPLIER,
     );
 
-    for (let i = 0; i < stockCodes.length; i += batchSize) {
-      const batch = stockCodes.slice(i, i + batchSize);
+    return this.prisma.stock.findMany();
+  }
 
-      // Log the progress at each step
-      this.logger.verbose(
-        `Processing batch ${i / batchSize + 1} of ${totalBatches}`,
-      );
+  private async processBatch(batch: { codeCVM: string }[]): Promise<void> {
+    const stockDetails: StockEntity[] = await this.b3Crawler.getStockDetails(batch.map(company => company.codeCVM));
+    this.logger.verbose(`Fetched ${stockDetails.length} stock details`);
+    await Promise.all(
+      stockDetails
+        .filter(stock => stock.code) // Filter out stocks without a code
+        .map((stockDetail, index) => this.processStock(batch[index].codeCVM, stockDetail)),
+    );
+  }
 
-      await this.delay(timeBetweenRequests);
-      await this.processBatch(batch);
+  private async processStock(companyCodeCVM: string, stockDetail: Partial<StockEntity>): Promise<void> {
+    const company = await this.prisma.company.findUnique({ where: { codeCVM: companyCodeCVM } });
+    if (!company) {
+      this.logger.error(`Company with codeCVM ${companyCodeCVM} not found`);
+      return;
+    }
 
-      // Log completion of the batch
-      this.logger.verbose(
-        `Completed batch ${i / batchSize + 1} of ${totalBatches}`,
-      );
+    // Prepare the data using the fromAbstract method
+    const preparedStockDetail = StockEntity.fromAbstract(stockDetail);
 
-      if (i / batchSize + 1 === totalBatches)
-        this.logger.verbose("All batches have been processed");
+    // Remove the codeCVM field as it's not part of the Stock model
+    delete preparedStockDetail.codeCVM;
+
+    const otherCodes = preparedStockDetail.otherCodes;
+    delete preparedStockDetail.otherCodes;
+
+    // Upsert the stock based on the company code.
+    const upsertedStock = await this.prisma.stock.upsert({
+      where: { code_companyId: { code: preparedStockDetail.code, companyId: company.id } },
+      update: { ...preparedStockDetail, companyId: company.id },
+      create: { ...preparedStockDetail, companyId: company.id } as Stock,
+    });
+
+    if (otherCodes?.length) {
+      await this.updateOtherCodes(stockDetail.otherCodes, upsertedStock.id);
     }
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  private async processBatch(batch: number[]): Promise<void> {
-    try {
-      const stockDetails = await this.fetchStockDetails(batch);
-      await Promise.all(
-        stockDetails.map((stockDetail, index) =>
-          this.processStock(batch[index], stockDetail),
-        ),
-      );
-    } catch (error) {
-      this.logger.error(
-        `Error processing batch: ${error.message}`,
-        error.stack,
-      );
-    }
-  }
-
-  private async processStock(
-    stockCode: number,
-    stockDetail: Partial<Stock>,
-  ): Promise<void> {
-    const stock = await this.stockModelRepository.findOne({
-      where: { codeCVM: stockCode.toString() },
-    });
-    if (!stock)
-      return this.logger.error(`Stock with codeCVM ${stockCode} not found`);
-
-    const updatedStock = await this.updateStock(stock, stockDetail);
-    if (stockDetail.otherCodes?.length)
-      await this.updateOtherCodes(stockDetail.otherCodes, updatedStock.id);
-  }
-
-  private fetchStockDetails(stockCodes: number[]): Promise<Stock[]> {
-    return this.b3Crawler.getStockDetails(stockCodes.map(String));
-  }
-
-  private async updateStock(
-    stock: StockModelDB,
-    stockDetail: Partial<Stock>,
-  ): Promise<StockModelDB> {
-    return this.stockModelRepository.save({
-      ...stock,
-      ...stockDetail,
-      updatedAt: new Date(),
-    });
-  }
-
-  private async updateOtherCodes(
-    otherCodes: OtherCode[],
-    stockId: number,
-  ): Promise<void> {
-    const otherCodesList = otherCodes.map((code) => ({
-      ...code,
-      stock: { id: stockId },
-    }));
-    await this.stockCodeModelRepository.upsert(otherCodesList, ["code"]);
+  private async updateOtherCodes(otherCodes: OtherCode[], stockId: number): Promise<void> {
+    await Promise.all(
+      otherCodes.map(async code => {
+        const stockCodeEntity = StockCodeEntity.fromAbstract(code);
+        await this.prisma.stockCode.upsert({
+          where: {
+            isin_stockId: { isin: stockCodeEntity.isin, stockId: stockId },
+          },
+          update: { isin: stockCodeEntity.isin, stockId: stockId },
+          create: { ...stockCodeEntity, stockId: stockId },
+        });
+      }),
+    );
   }
 }

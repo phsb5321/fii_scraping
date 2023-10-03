@@ -1,205 +1,129 @@
-import { IsNull, Not, Repository } from "typeorm";
+import { YahooDividendEntity } from '@/app/entities/Dividend/Dividend.entity';
+import { PrismaService } from '@/app/infra/prisma/prisma.service';
+import { BatchProcessorService } from '@/app/utils/batch-processor/batch-processor.service';
+import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { YahooDividendHistory, YahooHistory } from '@prisma/client';
 
-import {
-  StockCodeModelDB,
-  StockModelDB,
-  YahooDividendHistoryModelDB,
-  YahooHistoryModelDB,
-} from "@/app/models";
-import { YahooCrawlerProvider } from "@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider";
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+export interface MinimalStock {
+  id: number;
+  code: string;
+}
 
-/**
- * @class ExtractStockHistoryService
- * Service responsible for extracting and updating stock history and dividends
- */
 @Injectable()
 export class ExtractStockHistoryService {
   private readonly logger = new Logger(ExtractStockHistoryService.name);
+
+  // Define default configurations
   private readonly REQUESTS_LIMIT = 100;
   private readonly BATCH_SIZE = 10;
-  private readonly TIME_FRAME_MULTIPLIER = 1 * 60 * 1000; // 30 minutes in milliseconds
+  private readonly TIME_FRAME_MULTIPLIER = 1 * 60 * 1000; // 1 minute
 
   constructor(
-    @InjectRepository(StockModelDB)
-    private readonly stockModelDB: Repository<StockModelDB>,
-    @InjectRepository(StockCodeModelDB)
-    private readonly stockCodeModelDB: Repository<StockCodeModelDB>,
-    @InjectRepository(YahooDividendHistoryModelDB)
-    private readonly yahooDividendHistoryModelDB: Repository<YahooDividendHistoryModelDB>,
-    @InjectRepository(YahooHistoryModelDB)
-    private readonly yahooHistoryModelDB: Repository<YahooHistoryModelDB>,
+    private readonly prisma: PrismaService,
     @Inject(YahooCrawlerProvider)
     private readonly yahooCrawlerProvider: YahooCrawlerProvider,
+    private readonly batchProcessorService: BatchProcessorService,
   ) {}
 
   /**
-   * Executes the service, updating both stock history and dividends for specific or all stocks.
-   * @returns Tuple containing arrays of updated stock history and dividend models.
+   * Entry point for the service. It fetches stocks, processes them, and returns updated histories and dividends.
    */
-  async execute(): Promise<
-    [YahooHistoryModelDB[], YahooDividendHistoryModelDB[]]
-  > {
-    const stocks = await this.stockModelDB.find({
-      where: { code: Not(IsNull()) },
-      select: ["id", "code"],
+  async execute(): Promise<[YahooHistory[], YahooDividendHistory[]]> {
+    // Fetch stocks with defined codes
+    const stocks = await this.prisma.stock.findMany({
+      select: { id: true, code: true },
     });
+
     if (stocks.length === 0) {
-      this.logger.warn("No stock codes found");
+      this.logger.warn('No stock codes found');
       return [[], []];
     }
 
-    await this.processStocksInBatches(stocks);
+    // Update stock histories and dividends in batches
+    await this.batchProcessorService.executeInBatches(
+      stocks,
+      this.updateStocks.bind(this),
+      this.REQUESTS_LIMIT,
+      this.BATCH_SIZE,
+      this.TIME_FRAME_MULTIPLIER,
+    );
+
+    // Fetch and return updated histories and dividends
     return this.fetchUpdatedHistoriesAndDividends(stocks);
   }
 
-  private async processStocksInBatches(stocks: StockModelDB[]): Promise<void> {
-    const timeBetweenRequests =
-      ((stocks.length / this.REQUESTS_LIMIT) * this.TIME_FRAME_MULTIPLIER) /
-      Math.ceil(stocks.length / this.BATCH_SIZE);
-
-    this.logger.verbose(
-      `The process will take approximately ${(
-        (timeBetweenRequests * Math.ceil(stocks.length / this.BATCH_SIZE)) /
-        (60 * 1000)
-      ).toFixed(2)} minutes`,
-    );
-
-    for (let i = 0; i < stocks.length; i += this.BATCH_SIZE)
-      await this.updateStocks(
-        stocks.slice(i, i + this.BATCH_SIZE),
-        timeBetweenRequests,
-        i,
-        Math.ceil(stocks.length / this.BATCH_SIZE),
-      );
+  /**
+   * Updates both stock histories and dividends for a given batch of stocks.
+   */
+  private async updateStocks(stockBatch: MinimalStock[]): Promise<void> {
+    await Promise.all([
+      this.updateStockHistories(stockBatch),
+      // this.updateStockDividends(stockBatch)
+    ]);
   }
 
-  private async updateStocks(
-    stockBatch: StockModelDB[],
-    timeBetweenRequests: number,
-    i: number,
-    totalBatches: number,
-  ): Promise<void> {
-    try {
-      await Promise.all([
-        this.updateStockHistories(stockBatch),
-        this.updateStockDividends(stockBatch),
-      ]);
+  /**
+   * Updates stock histories for a given list of stocks.
+   */
+  private async updateStockHistories(stocks: MinimalStock[]): Promise<void> {
+    for (const stock of stocks) {
+      try {
+        const stockData = await this.yahooCrawlerProvider.getStockTradeHistory(`${stock.code}.SA`);
+        if (!stockData) continue;
 
-      await this.delay(timeBetweenRequests);
-
-      this.logger.verbose(
-        `Processed batch ${i / this.BATCH_SIZE + 1} of ${totalBatches}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to process batch ${
-          i / this.BATCH_SIZE + 1
-        } of ${totalBatches}: ${error.message}`,
-      );
+        for (const item of stockData) {
+          // Upsert the data into the database
+          await this.prisma.yahooHistory.upsert({
+            where: { stockId_date: { stockId: stock.id, date: item.date } },
+            update: { ...item, stockId: stock.id },
+            create: { ...item, stockId: stock.id },
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to update data for ${stock.code}: ${error.message}`);
+      }
     }
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+  /**
+   * Updates stock dividends for a given list of stocks.
+   */
+  private async updateStockDividends(stocks: MinimalStock[]): Promise<void> {
+    for (const stock of stocks) {
+      try {
+        const stockData: YahooDividendEntity[] = await this.yahooCrawlerProvider.getStockdividend(`${stock.code}.SA`);
+        if (!stockData) continue;
 
-  private async updateStockHistories(stocks: StockModelDB[]): Promise<void> {
-    await Promise.all(
-      stocks.map(async (stock) => {
-        try {
-          const yahooStockHistory =
-            await this.yahooCrawlerProvider.getStockTradeHistory(
-              `${stock.code}.SA`,
-            );
-
-          if (!yahooStockHistory || yahooStockHistory.length === 0) return;
-
-          // Map over yahooStockHistory and add stockId to each item
-          const historyWithStockId = yahooStockHistory.map((item) => ({
-            ...item,
-            stockId: stock.id, // Relate stock.id from the stock array to the stockId.
-          }));
-
-          const { generatedMaps } = await this.yahooHistoryModelDB.upsert(
-            this.stableSort(
-              historyWithStockId,
-              (a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0),
-            ),
-            ["stockId", "date"],
-          );
-
-          await this.yahooHistoryModelDB.save(generatedMaps);
-        } catch (error) {
-          this.logger.error(
-            `Failed to update history for ${stock.code}: ${error.message}`,
-          );
+        for (const item of stockData) {
+          // Upsert the data into the database
+          await this.prisma.yahooDividendHistory.upsert({
+            where: { stockId_date: { stockId: stock.id, date: item.date } },
+            update: { ...item, stockId: stock.id },
+            create: { ...item, stockId: stock.id } as unknown as YahooDividendHistory,
+          });
         }
-      }),
-    );
+      } catch (error) {
+        this.logger.error(`Failed to update data for ${stock.code}: ${error.message}`);
+      }
+    }
   }
 
-  private async updateStockDividends(stocks: StockModelDB[]): Promise<void> {
-    await Promise.all(
-      stocks.map(async (stock) => {
-        try {
-          const yahooStockDividend =
-            await this.yahooCrawlerProvider.getStockdividend(
-              `${stock.code}.SA`,
-            );
-
-          if (!yahooStockDividend) return;
-
-          // If yahooStockDividend is an array, map over it and add stockId to each item
-          // If it's a single object, add stockId property directly to it
-          const dividendWithStockId = yahooStockDividend.map((dividend) => ({
-            ...dividend,
-            stockId: stock.id,
-          }));
-
-          const { generatedMaps } =
-            await this.yahooDividendHistoryModelDB.upsert(dividendWithStockId, [
-              "stockId",
-              "date",
-            ]);
-
-          await this.yahooDividendHistoryModelDB.save(generatedMaps);
-        } catch (error) {
-          this.logger.error(
-            `Failed to update dividends for ${stock.code}: ${error.message}`,
-          );
-        }
-      }),
-    );
-  }
-
+  /**
+   * Fetches updated histories and dividends for a given list of stocks.
+   */
   private async fetchUpdatedHistoriesAndDividends(
-    stocks: StockModelDB[],
-  ): Promise<[YahooHistoryModelDB[], YahooDividendHistoryModelDB[]]> {
-    const stockIds = stocks.map((stock) => stock.id);
+    stocks: MinimalStock[],
+  ): Promise<[YahooHistory[], YahooDividendHistory[]]> {
+    const stockIds = stocks.map(stock => stock.id);
+    const histories = await this.prisma.yahooHistory.findMany({
+      where: { stockId: { in: stockIds } },
+    });
 
-    const [histories, dividends] = await Promise.all([
-      this.yahooHistoryModelDB
-        .createQueryBuilder("history")
-        .innerJoin("history.stock", "stock")
-        .where("stock.id IN (:...stockIds)", { stockIds })
-        .getMany(),
-
-      this.yahooDividendHistoryModelDB
-        .createQueryBuilder("dividendHistory")
-        .innerJoin("dividendHistory.stock", "stock")
-        .where("stock.id IN (:...stockIds)", { stockIds })
-        .getMany(),
-    ]);
+    const dividends = await this.prisma.yahooDividendHistory.findMany({
+      where: { stockId: { in: stockIds } },
+    });
 
     return [histories, dividends];
-  }
-
-  private stableSort<T>(arr: T[], comparator: (a: T, b: T) => number): T[] {
-    return arr
-      .map((elem, index) => ({ elem, index }))
-      .sort((a, b) => comparator(a.elem, b.elem) || a.index - b.index)
-      .map(({ elem }) => elem);
   }
 }

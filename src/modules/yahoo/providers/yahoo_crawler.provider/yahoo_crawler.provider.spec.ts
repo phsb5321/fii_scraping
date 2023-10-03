@@ -1,22 +1,12 @@
 // src/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider.spec.ts
 
-import { YahooDividend } from '@/app/entities/Dividend/Dividend.entity';
-import { YahooStockHistory } from '@/app/entities/YahooHistory/YahooHistory.entity';
+import { YahooDividendEntity } from '@/app/entities/Dividend/Dividend.entity';
+import { YahooStockHistoryEntity } from '@/app/entities/YahooHistory/YahooHistory.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import axios from 'axios';
 import { YahooCrawlerProvider } from './yahoo_crawler.provider';
-
-// Mock the axios module
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('YahooCrawlerProvider', () => {
   let provider: YahooCrawlerProvider;
-
-  beforeAll(() => {
-    // Set time out to 20s
-    jest.setTimeout(20000);
-  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,66 +22,38 @@ describe('YahooCrawlerProvider', () => {
 
   it('should return a stock', async () => {
     const stockCode = 'PETR4.SA';
-
-    // Mock the axios response
-    mockedAxios.get.mockResolvedValueOnce({ data: 'your CSV data here' });
-
     const stock = await provider.getStockTradeHistory(stockCode);
     expect(stock).toBeDefined();
   });
 
-  it('should return a stock with the correct keys', async () => {
-    // Get the stock
-    const stockCode = 'BBAS3.SA';
-
-    // Mock the axios response
-    const mockData = `Date,Open,High,Low,Close,AdjClose,Volume
-    2021-09-20,150.00,155.00,145.00,154.00,154.00,100000`;
-
-    mockedAxios.get.mockResolvedValueOnce({ data: mockData });
-
-    const stock = await provider.getStockTradeHistory(stockCode);
-
-    // Get the keys
-    const keys = Object.keys(stock[0]);
-
-    // Get the keys from the entity
-    const entityKeys = Object.keys(new YahooStockHistory(stock[0]));
-
-    // Compare the keys
-    expect(keys).toEqual(entityKeys);
-  });
+  it(
+    'should return a stock with the correct keys',
+    async () => {
+      const stockCode = 'AFLT3.SA';
+      const stock = await provider.getStockTradeHistory(stockCode);
+      const keys = Object.keys(stock[0]);
+      const entityKeys = Object.keys(new YahooStockHistoryEntity(stock[0]));
+      expect(keys).toEqual(entityKeys);
+    },
+    2 * 60 * 1000,
+  );
 
   // Test getStockdividend
   it('should return a stock dividend', async () => {
     const stockCode = 'PETR4.SA';
-
-    // Simulate a successful HTTP response
-    mockedAxios.get.mockResolvedValueOnce({ data: 'your CSV data here' });
-
     const stock = await provider.getStockdividend(stockCode);
     expect(stock).toBeDefined();
   });
 
-  it('should return a stock with the correct dividend keys', async () => {
-    // Get the stock
-    const stockCode = 'BBAS3.SA';
-
-    // Mock the axios response
-    const mockDividendData = `Date,Dividends
-    2021-09-20,5.00`;
-
-    mockedAxios.get.mockResolvedValueOnce({ data: mockDividendData });
-
-    const stock = await provider.getStockdividend(stockCode);
-
-    // Get the keys
-    const keys = Object.keys(stock[0]);
-
-    // Get the keys from the entity
-    const entityKeys = Object.keys(new YahooDividend(stock[0]));
-
-    // Compare the keys
-    expect(keys).toEqual(entityKeys);
-  });
+  it(
+    'should return a stock with the correct dividend keys',
+    async () => {
+      const stockCode = 'BMEB4.SA';
+      const stock = await provider.getStockdividend(stockCode);
+      const keys = Object.keys(stock[0]);
+      const entityKeys = Object.keys(new YahooDividendEntity(stock[0]));
+      expect(keys).toEqual(entityKeys);
+    },
+    2 * 60 * 1000,
+  );
 });

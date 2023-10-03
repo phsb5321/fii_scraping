@@ -16,7 +16,6 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
-
   },
   "_moduleAliases": {
     "@": "src"
@@ -35,6 +34,7 @@
     "@nestjs/schedule": "^3.0.4",
     "@nestjs/swagger": "^7.1.12",
     "@nestjs/typeorm": "^10.0.0",
+    "@prisma/client": "^5.3.1",
     "axios": "^1.5.1",
     "bottleneck": "^2.19.5",
     "bull": "^4.11.3",
@@ -63,6 +63,7 @@
     "eslint-plugin-prettier": "^5.0.0",
     "jest": "^29.7.0",
     "prettier": "^3.0.3",
+    "prisma": "^5.3.1",
     "source-map-support": "^0.5.21",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
