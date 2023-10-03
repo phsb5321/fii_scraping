@@ -1,50 +1,91 @@
-import { Repository } from 'typeorm';
-
-import { Stock } from '@/app/entities/Stock/Stock.entity';
-import { StockModelDB } from '@/app/models/Stock.model';
+import { CompanyEntity } from '@/app/entities/Company/Company.entity';
+import { PrismaService } from '@/app/infra/prisma/prisma.service';
 import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Company } from '@prisma/client';
 
-/**
- * ScrapeAllStocksService fetches stock data from the B3 Crawler and adds new
- * stocks to the database, returning a list of the newly added stocks.
- *
- * @example
- * const scrapeAllStocksService = new ScrapeAllStocksService(repository, b3Crawler);
- * const newStocks = await scrapeAllStocksService.execute();
- * console.log(newStocks);
- */
 @Injectable()
 export class ScrapeAllStocksService {
   private readonly logger = new Logger(ScrapeAllStocksService.name);
 
   constructor(
-    @InjectRepository(StockModelDB)
-    private readonly stockModelRepository: Repository<StockModelDB>,
+    private readonly prisma: PrismaService,
     @Inject(B3CrawlerProvider)
     private readonly b3Crawler: B3CrawlerProvider,
   ) {}
 
   /**
-   * Fetches stock data from the B3 Crawler, adds new stocks to the database,
-   * and returns the newly added stocks.
-   *
-   * @returns {Promise<StockModelDB[]>} An array of newly added StockModelDB instances.
+   * Entry point for the service. Fetches stocks, processes them, and returns a summary message.
    */
-  async execute(): Promise<StockModelDB[]> {
-    const stocks: Stock[] = await this.b3Crawler.getStocks();
+  async execute(): Promise<string> {
+    try {
+      const stocks = await this.fetchStocks();
+      const newStocks = await this.processStocks(stocks);
 
-    const upsertResult = await this.stockModelRepository.upsert(stocks, [
-      'tradingName',
-      'issuingCompany',
-      'codeCVM',
-      'cnpj',
-    ]);
+      this.logger.verbose(`Found ${newStocks.length} new stocks`);
+      return `Found ${newStocks.length} new stocks`;
+    } catch (error) {
+      this.logger.error(`Error in execute: ${error.message}`);
+      throw error;
+    }
+  }
 
-    const newStocks = (upsertResult.generatedMaps as StockModelDB[]).filter(stock => stock !== undefined);
+  /**
+   * Fetches stocks using the B3Crawler.
+   */
+  private async fetchStocks(): Promise<CompanyEntity[]> {
+    return this.b3Crawler.getStocks();
+  }
 
-    this.logger.verbose(`Found ${newStocks.length} new stocks`);
+  /**
+   * Processes a list of stocks, either updating existing ones or creating new ones.
+   */
+  private async processStocks(stocks: CompanyEntity[]): Promise<Company[]> {
+    const newStocks: Company[] = [];
+
+    for (const stock of stocks) {
+      if (!this.hasValidCodeCVM(stock)) continue;
+
+      const upsertedStock = await this.upsertStock(stock);
+      this.addNewStockToList(newStocks, upsertedStock);
+    }
+
     return newStocks;
+  }
+
+  /**
+   * Verifies that a stock has a valid codeCVM.
+   */
+  private hasValidCodeCVM(stock: CompanyEntity): boolean {
+    if (!stock.codeCVM) {
+      this.logger.warn(`Skipping stock due to missing codeCVM: ${JSON.stringify(stock)}`);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Inserts a new stock or updates an existing one in the database.
+   */
+  private async upsertStock(stock: CompanyEntity): Promise<Company> {
+    try {
+      return await this.prisma.company.upsert({
+        where: { codeCVM: stock.codeCVM },
+        create: stock as unknown as Company,
+        update: stock,
+      });
+    } catch (error) {
+      this.logger.error(`Error processing stock ${stock.codeCVM}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Adds a stock to the list if it's new.
+   */
+  private addNewStockToList(newStocks: Company[], stock: Company): void {
+    if (!newStocks.some(existingStock => existingStock.id === stock.id)) {
+      newStocks.push(stock);
+    }
   }
 }

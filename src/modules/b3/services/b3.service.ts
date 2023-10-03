@@ -1,10 +1,9 @@
-import { StockModelDB } from '@/app/models/Stock.model';
 import { EventConfigs } from '@/app/utils/EventConfigs';
-import { ListAllStocksService } from '@/modules/b3/usecases/list-all-stocks/list-all-stocks.service';
 import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
 import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { Stock } from '@prisma/client';
 
 @Injectable()
 export class B3Service {
@@ -13,7 +12,6 @@ export class B3Service {
   constructor(
     private scrapeAllStocksService: ScrapeAllStocksService,
     private updateAllStockService: UpdateAllStockService,
-    private listAllStocksService: ListAllStocksService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -41,13 +39,13 @@ export class B3Service {
     }
   }
 
-  async scrapeAllStocks(): Promise<StockModelDB[]> {
+  async scrapeAllStocks(): Promise<string> {
     this.logger.verbose(`Executing ${EventConfigs.SCRAPE_ALL_STOCKS}`);
     const scrapedStocks = await this.scrapeAllStocksService.execute();
     return scrapedStocks;
   }
 
-  async scrapeAllStocksDetails(): Promise<StockModelDB[]> {
+  async scrapeAllStocksDetails(): Promise<Stock[]> {
     try {
       this.logger.verbose(`Executing ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS}`);
       const scrapedStocksDetails = await this.updateAllStockService.execute();
@@ -57,11 +55,5 @@ export class B3Service {
       this.logger.error(`Error in ${EventConfigs.SCRAPE_ALL_STOCKS_DETAILS}`, error.stack);
       throw error;
     }
-  }
-
-  async listAllStocks(): Promise<StockModelDB[]> {
-    this.logger.verbose(`Listing all stocks`);
-    const stocks = await this.listAllStocksService.execute();
-    return stocks;
   }
 }

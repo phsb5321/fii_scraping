@@ -6,7 +6,7 @@
  * const stockCode = new StockCode({ code: 'AAPL', isin: 'US0378331005' });
  * const anotherStockCode = StockCode.fromAbstract({ code: 'MSFT', isin: 'US5949181045', otherField: 'extraData' });
  */
-export class StockCode {
+export class StockCodeEntity {
   code: string;
   isin: string;
 
@@ -14,7 +14,7 @@ export class StockCode {
    * Constructs a new instance of StockCode.
    * @param stockCode - Object containing code and isin for the stock.
    */
-  constructor(stockCode: Partial<StockCode>) {
+  constructor(stockCode: Partial<StockCodeEntity>) {
     Object.assign(this, stockCode);
   }
 
@@ -26,11 +26,11 @@ export class StockCode {
    * @param object - Abstract data containing at least the `code` and `isin` properties.
    * @returns A new instance of StockCode.
    */
-  public static fromAbstract(object: { [key: string]: any }): StockCode {
+  public static fromAbstract(object: { [key: string]: any }): StockCodeEntity {
     const { code, isin } = object;
     if (!code || !isin) {
       throw new Error('Required fields `code` and `isin` are missing');
     }
-    return new StockCode({ code, isin });
+    return new StockCodeEntity({ code, isin });
   }
 }

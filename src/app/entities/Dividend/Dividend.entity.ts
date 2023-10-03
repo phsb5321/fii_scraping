@@ -1,16 +1,8 @@
 /**
- * Represents the dividend data from Yahoo.
- */
-export interface YahooDividendI {
-  date?: Date; // Date can be optional based on the given code.
-  dividend: number;
-}
-
-/**
  * A class that implements the YahooDividendI interface.
  * Provides utility methods to create instances from abstract data.
  */
-export class YahooDividend implements YahooDividendI {
+export class YahooDividendEntity {
   date?: Date;
   dividend: number;
 
@@ -18,7 +10,7 @@ export class YahooDividend implements YahooDividendI {
    * Constructor for the YahooDividend class.
    * @param dividend - (Optional) Object of type YahooDividendI.
    */
-  constructor(dividend?: YahooDividendI) {
+  constructor(dividend?: YahooDividendEntity) {
     Object.assign(this, dividend);
   }
 
@@ -27,13 +19,15 @@ export class YahooDividend implements YahooDividendI {
    * @param object - Abstract data object with possible date and dividend properties.
    * @returns An instance of YahooDividend.
    */
-  public static fromAbstract(object: { [key: string]: any }): YahooDividend {
-    const [day, month, year] = object.date?.split('/') ?? [];
-    const date = year ? new Date(`${year}-${month}-${day}`) : undefined;
+  public static fromAbstract(object: { [key: string]: any }): YahooDividendEntity {
+    const [year, month, day] = object.date?.split('-') ?? [];
 
-    return new YahooDividend({
+    // Create a UTC date using the Date.UTC() function
+    const date = year ? new Date(Date.UTC(+year, +month - 1, +day)) : undefined;
+
+    return new YahooDividendEntity({
       date,
-      dividend: object.dividend,
+      dividend: object.dividends,
     });
   }
 }

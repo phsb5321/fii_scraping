@@ -1,10 +1,10 @@
-import { YahooStockHistory } from './YahooHistory.entity';
+import { YahooStockHistoryEntity } from './YahooHistory.entity';
 
 describe('YahooStockHistory', () => {
   describe('constructor', () => {
     it('should create an instance with provided data', () => {
       // Arrange
-      const testData: Partial<YahooStockHistory> = {
+      const testData: Partial<YahooStockHistoryEntity> = {
         date: new Date('2023-09-08'),
         open: 150,
         high: 155,
@@ -16,7 +16,7 @@ describe('YahooStockHistory', () => {
       };
 
       // Act
-      const stockHistory = new YahooStockHistory(testData);
+      const stockHistory = new YahooStockHistoryEntity(testData);
 
       // Assert
       expect(stockHistory).toEqual(testData);
@@ -37,7 +37,7 @@ describe('YahooStockHistory', () => {
         stockCode: 'YHOO',
       };
 
-      const expectedData: YahooStockHistory = {
+      const expectedData: YahooStockHistoryEntity = {
         date: new Date('2023-09-08'),
         open: 150,
         high: 155,
@@ -49,7 +49,7 @@ describe('YahooStockHistory', () => {
       };
 
       // Act
-      const stockHistory = YahooStockHistory.fromAbstract(abstractData);
+      const stockHistory = YahooStockHistoryEntity.fromAbstract(abstractData);
 
       // Assert
       expect(stockHistory.date.getTime()).toEqual(expectedData.date.getTime());

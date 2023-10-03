@@ -1,74 +1,84 @@
 # Docker Compose file for running an application stack with Nest.js, MySQL, and Redis
-version: "3.9"
+#
+# This file defines services, networks and volumes that can be used to
+# spin up our microservice-based application with docker compose.
+# Every service represents a container which the Docker daemon automatically
+# manages the lifecycle of.
+#
+# Outline:
+# 1) Services
+#   - Application server (Nest.js)
+#   - Main database server (PostgreSQL)
+#   - Test database server (PostgreSQL)
+#
+# 2) Networks
+#   - Main network for database (Bridge driver)
+#   - Test network for database (Bridge driver)
+#
+# 3) Volumes
+#   - Cache
 
+version: '3.9'
+
+# All services our application relies on
 services:
-  # Nest.js application service
+  # The Nest.js application service
   app:
-    image: node:19 # Use Node.js 19 as the base image
-    working_dir: /app # Set the working directory inside the container
-    container_name: nestjs # Name of the container
+    image: node:19 # The base Docker image, Node version 19 here.
+    working_dir: /app # Defines the working directory for instructions that follow in the Dockerfile.
+    container_name: nestjs # Assign a name to the container.
     volumes:
-      - .:/app # Mount the current directory on the host to /app in the container
+      - .:/app # Map the code inside the docker to the local development folder.
     ports:
-      - 3000:3000 # Map the host port 3000 to the container port 3000
-      - 3500:3500 # Map the host port 3500 to the container port 3500
-    command: sh -c "npm install -g pnpm && pnpm install && pnpm run start:dev"
+      - 3000:3000 # Expose and map port 3000 of the Docker host to port 3000 in the Docker container.
+      - 3500:3500 # Expose and map port 3500 of the Docker host to port 3500 in the Docker container.
+    # The command that starts the Nest.js application
+    command: >
+      sh -c "npm install -g pnpm &&
+            pnpm install &&
+            npx prisma migrate deploy &&
+            pnpm run start:dev"
     depends_on:
-      - db # Ensure the db service is started before the app service
+      - database # Ensure the database service starts before app service.
     networks:
-      - db # Connect the app service to the db network
+      - database # App service's connection to database network
 
-  # MySQL database service
-  db:
-    image: mysql # Use the MySQL image
-    container_name: mysql # Name of the container
-    command: --default-authentication-plugin=mysql_native_password # Set the default authentication plugin (not recommended for production)
-    restart: "on-failure" # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
+  # Main PostgreSQL database service to be used by application
+  database:
+    image: postgres:latest # Use the Docker image for the latest version of PostgreSQL
+    container_name: postgres # Assign a name to the container.
+    restart: 'on-failure' # Policy for when to restart the container
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # PostgreSQL superuser password
+      POSTGRES_DB: ${POSTGRES_DB} # Name of database
     ports:
-      - 3306:3306 # Map the host port 3306 to the container port 3306
+      - 5432:5432 # Bridge host port 5432 to PostgreSQL port 5432
     networks:
-      - db # Connect the db service to the db network
+      - database # Database service's connection to database network
 
-  # MySQL database service for integration tests
-  test_db:
-    image: mysql
-    container_name: mysql_test
-    command: --default-authentication-plugin=mysql_native_password
+  # Separate PostgreSQL database service for running integration tests to prevent clashing with main database
+  test_database:
+    image: postgres:latest # Use the Docker image for the latest version of PostgreSQL
+    container_name: postgres_test # Assign a name to the container.
+    restart: 'on-failure' # Policy for when to restart the container
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # PostgreSQL superuser password
+      POSTGRES_DB: ${POSTGRES_DB} # Name of database
     ports:
-      - 3307:3306 # Map a different host port to avoid conflict with the development DB service
+      - 5433:5432 # Bridge host port 5433 to PostgreSQL port 5432 for test database
     networks:
-      - db_test
+      - database_test # Test Database service's connection to test database network
 
-
-  # Redis cache service
-  cache:
-    image: redis/redis-stack:latest # Use the Redis image
-    container_name: redis # Name of the container
-    restart: "on-failure" # Disable automatic restart (options: "no", "always", "on-failure", "unless-stopped")
-    ports:
-      - "6379:6379" # Map the host port 6379 to the container port 6379
-      - "8001:8001" # Map the host port 8001 to the container port 8001
-    command: redis-server --requirepass example # Set the Redis password
-    volumes:
-      - cache:/data # Mount the named volume "cache" to /data in the container
-    networks:
-      - db # Connect the cache service to the db network
-
-# Networks used in the services
-networks:
-  db:
-    driver: bridge # Use the bridge network driver for the db network
-  db_test:
+networks: # Networks that can be shared by multiple services
+  # Network for the main database. By default, all containers connected to the same network can communicate with each other.
+  database:
+    driver: bridge # Use the default bridge network
+  # Network for the test database
+  database_test:
     driver: bridge
 
-
-# Volumes used in the services
+# To persist data across container restarts, Docker provides volumes.
 volumes:
+  # Local driver means the data will persist on the host machine at /var/lib/docker/volumes/
   cache:
-    driver: local # Use the local volume driver for the cache volume
+    driver: local

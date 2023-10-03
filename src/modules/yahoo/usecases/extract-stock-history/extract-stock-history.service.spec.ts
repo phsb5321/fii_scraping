@@ -52,11 +52,11 @@ describe('ExtractStockHistoryService', () => {
       const stocks: Partial<StockModelDB>[] = [{ codeCVM: '1' }, { codeCVM: '2' }];
       jest.spyOn(repository, 'find').mockResolvedValueOnce(stocks as StockModelDB[]);
       jest.spyOn(repository, 'find').mockResolvedValueOnce(stocks as StockModelDB[]);
-      jest.spyOn(service as any, 'processStocksInBatches').mockResolvedValueOnce(undefined);
+      jest.spyOn(service, 'processStocksInBatches').mockResolvedValueOnce(undefined);
 
       const result = await service.execute();
       expect(mocked(Logger.verbose)).toHaveBeenCalledWith(`Updating ${stocks.length} stocks`);
-      expect((service as any).processStocksInBatches).toHaveBeenCalledWith([1, 2]);
+      expect(service.processStocksInBatches).toHaveBeenCalledWith([1, 2]);
       expect(result).toEqual(stocks as StockModelDB[]);
     });
   });

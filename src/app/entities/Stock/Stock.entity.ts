@@ -1,60 +1,79 @@
-/**
- * Represents other codes related to a stock, such as ISIN.
- */
 export type OtherCode = {
   code?: string;
   isin?: string;
 };
 
-/**
- * Stock represents a company's stock details.
- * Includes details like company name, trading name, industry classification, etc.
- * Also provides methods to generate a stock instance from abstract data.
- */
-export class Stock {
+type StockKeys = keyof StockEntity;
+
+export class StockEntity {
+  id?: number;
+  companyId?: number;
   codeCVM?: string;
-  issuingCompany?: string;
-  companyName?: string;
-  tradingName?: string;
-  cnpj?: string;
   marketIndicator?: number;
   typeBDR?: string;
   dateListing?: Date;
   status?: string;
-  segment?: string;
-  segmentEng?: string;
   type?: number;
   market?: string;
-  industryClassification?: string;
-  industryClassificationEng?: string | null;
-  activity?: string;
-  website?: string;
   hasQuotation?: boolean;
   institutionCommon?: string;
   institutionPreferred?: string;
   code?: string;
-  otherCodes?: OtherCode[];
   hasEmissions?: boolean;
   hasBDR?: boolean;
   describleCategoryBVMF?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 
-  constructor(stock?: Partial<Stock>) {
+  // Additional fields
+  otherCodes?: OtherCode[];
+
+  constructor(stock?: Partial<StockEntity>) {
     Object.assign(this, stock);
   }
 
-  /**
-   * Creates an instance of Stock from abstract data.
-   * It primarily converts date strings into Date objects and strings to numbers where needed.
-   * @param object - Abstract data object to be transformed to Stock.
-   */
-  public static fromAbstract(object: Record<string, any>): Stock {
+  public static fromAbstract(object: Record<string, any>): Partial<StockEntity> {
     const date = this.parseDate(object.dateListing);
-    return new Stock({
-      ...object,
+    const filteredData = this.filterAllowedKeys(object);
+    return {
+      ...filteredData,
       dateListing: date,
       type: Number(object.type),
       marketIndicator: Number(object.marketIndicator),
-    });
+    };
+  }
+
+  private static filterAllowedKeys(data: Record<string, any>): Partial<StockEntity> {
+    const allowedKeys: StockKeys[] = [
+      'id',
+      'companyId',
+      'codeCVM',
+      'marketIndicator',
+      'typeBDR',
+      'dateListing',
+      'status',
+      'type',
+      'market',
+      'hasQuotation',
+      'institutionCommon',
+      'institutionPreferred',
+      'code',
+      'hasEmissions',
+      'hasBDR',
+      'describleCategoryBVMF',
+      'createdAt',
+      'updatedAt',
+      'otherCodes',
+    ];
+    const filtered: Record<string, any> = {};
+
+    for (const key of allowedKeys) {
+      if (data[key] !== undefined) {
+        filtered[key] = data[key];
+      }
+    }
+
+    return filtered as Partial<StockEntity>;
   }
 
   private static parseDate(dateString?: string): Date | undefined {

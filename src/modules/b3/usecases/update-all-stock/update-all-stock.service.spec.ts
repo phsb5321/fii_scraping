@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 
-import { Stock } from '@/app/entities/Stock/Stock.entity';
+import { StockEntity } from '@/app/entities/Stock/Stock.entity';
 import { StockModelDB } from '@/app/models/Stock.model';
 import { StockCodeModelDB } from '@/app/models/StockCode.model';
 import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
@@ -71,7 +71,7 @@ describe('UpdateAllStockService', () => {
       const mockStocks: StockModelDB[] = [{ codeCVM: '1' } as StockModelDB, { codeCVM: '2' } as StockModelDB];
       (stockModelRepository.find as jest.Mock).mockResolvedValue(mockStocks);
 
-      const mockStockDetails: Partial<Stock>[] = [{ codeCVM: '1' }, { codeCVM: '2' }];
+      const mockStockDetails: Partial<StockEntity>[] = [{ codeCVM: '1' }, { codeCVM: '2' }];
       (b3CrawlerProvider.getStockDetails as jest.Mock).mockResolvedValue(mockStockDetails);
 
       const result = await service.execute();

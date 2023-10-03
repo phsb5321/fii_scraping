@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource database {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                        Int      @id @default(autoincrement())
+  codeCVM                   String   @unique
+  issuingCompany            String?
+  companyName               String?
+  tradingName               String?
+  cnpj                      String?
+  website                   String?
+  segment                   String?
+  segmentEng                String?
+  industryClassification    String?
+  industryClassificationEng String?
+  activity                  String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  stocks                    Stock[]
+}
+
+model Stock {
+  id                    Int       @id @default(autoincrement())
+  companyId             Int
+  marketIndicator       Int?
+  typeBDR               String?
+  dateListing           DateTime?
+  status                String?
+  type                  Int?
+  market                String?
+  hasQuotation          Boolean?
+  institutionCommon     String?
+  institutionPreferred  String?
+  code                  String
+  hasEmissions          Boolean?
+  hasBDR                Boolean?
+  describleCategoryBVMF String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  company                Company                @relation(fields: [companyId], references: [id])
+  stockCodes             StockCode[]            @relation("StockCodeToStock")
+  yahooDividendHistories YahooDividendHistory[] @relation("YahooDividendHistoryToStock")
+  yahooHistories         YahooHistory[]         @relation("YahooHistoryToStock")
+
+  @@unique([code, companyId])
+}
+
+model StockCode {
+  id        Int      @id @default(autoincrement())
+  stockId   Int
+  code      String?
+  isin      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stock     Stock    @relation(fields: [stockId], references: [id], name: "StockCodeToStock")
+
+  @@unique([isin, stockId], name: "isin_stockId")
+}
+
+model YahooDividendHistory {
+  id        Int      @id @default(autoincrement())
+  stockId   Int
+  date      DateTime
+  dividend  Decimal  @database.Decimal(15, 5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stock     Stock    @relation(fields: [stockId], references: [id], name: "YahooDividendHistoryToStock")
+
+  @@unique([stockId, date], name: "stockId_date")
+}
+
+model YahooHistory {
+  id        Int      @id @default(autoincrement())
+  stockId   Int
+  date      DateTime
+  open      String
+  high      String
+  low       String
+  close     String
+  adjClose  String
+  volume    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stock     Stock    @relation(fields: [stockId], references: [id], name: "YahooHistoryToStock")
+
+  @@unique([stockId, date], name: "stockId_date")
+}
