@@ -4,7 +4,7 @@
  */
 export class YahooDividendEntity {
   date?: Date;
-  dividend: number;
+  dividend: string;
 
   /**
    * Constructor for the YahooDividend class.

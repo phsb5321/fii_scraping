@@ -1,28 +1,32 @@
-import { EventConfigs } from '@/app/utils/EventConfigs';
-import { Controller, Post } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ExtractStockHistoryService } from '@/modules/yahoo/usecases/extract-stock-history/extract-stock-history.service';
+import { Controller, Logger, Post } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Yahoo')
 @Controller('yahoo')
 export class YahooController {
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  private readonly logger = new Logger(YahooController.name);
 
+  constructor(private readonly extractStockHistoryService: ExtractStockHistoryService) {}
+
+  /**
+   * Update Yahoo Stock.
+   *
+   * @returns {Promise<string>} Update status message
+   */
   @Post('update-yahoo-stock')
-  @ApiOperation({ summary: 'Trigger event to update Yahoo Stock' })
-  @ApiResponse({ status: 200, description: 'Event triggered successfully.' })
+  @ApiOperation({ summary: 'Update Yahoo Stock' })
+  @ApiResponse({ status: 200, description: 'Stocks updated successfully.' })
   async updateYahooStock(): Promise<string> {
-    return new Promise(resolve => {
-      this.eventEmitter.once('update.yahooStock.response', data => {
-        resolve(`Update Yahoo stock event has been triggered! ${data}`);
-      });
-      this.eventEmitter.emit(EventConfigs.UPDATE_YAHOO_STOCK);
-    });
+    return this.extractStockHistoryService.execute();
   }
 
+  /**
+   * Scheduled job to update Yahoo Stock at 5AM every day.
+   */
   @Cron(CronExpression.EVERY_DAY_AT_5AM)
   async scheduledUpdateYahooStock(): Promise<void> {
-    this.eventEmitter.emit(EventConfigs.UPDATE_YAHOO_STOCK);
+    await this.updateYahooStock();
   }
 }

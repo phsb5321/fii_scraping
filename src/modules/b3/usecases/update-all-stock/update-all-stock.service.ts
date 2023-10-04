@@ -22,12 +22,12 @@ export class UpdateAllStockService {
     private readonly batchProcessorService: BatchProcessorService,
   ) {}
 
-  async execute(): Promise<Stock[]> {
+  async execute(): Promise<string> {
     const companies = await this.prisma.company.findMany({ select: { codeCVM: true } });
 
     if (companies.length === 0) {
       this.logger.verbose('No companies found');
-      return [];
+      return 'No companies found';
     }
 
     this.logger.verbose(`Updating stocks for ${companies.length} companies`);
@@ -40,7 +40,7 @@ export class UpdateAllStockService {
       this.TIME_FRAME_MULTIPLIER,
     );
 
-    return this.prisma.stock.findMany();
+    return `Updated details for ${companies.length} companies`;
   }
 
   private async processBatch(batch: { codeCVM: string }[]): Promise<void> {

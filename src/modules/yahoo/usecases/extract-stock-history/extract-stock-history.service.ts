@@ -29,7 +29,7 @@ export class ExtractStockHistoryService {
   /**
    * Entry point for the service. It fetches stocks, processes them, and returns updated histories and dividends.
    */
-  async execute(): Promise<[YahooHistory[], YahooDividendHistory[]]> {
+  async execute(): Promise<string> {
     // Fetch stocks with defined codes
     const stocks = await this.prisma.stock.findMany({
       select: { id: true, code: true },
@@ -37,7 +37,7 @@ export class ExtractStockHistoryService {
 
     if (stocks.length === 0) {
       this.logger.warn('No stock codes found');
-      return [[], []];
+      return 'No stock codes found';
     }
 
     // Update stock histories and dividends in batches
@@ -50,7 +50,7 @@ export class ExtractStockHistoryService {
     );
 
     // Fetch and return updated histories and dividends
-    return this.fetchUpdatedHistoriesAndDividends(stocks);
+    return 'Stocks updated successfully';
   }
 
   /**
@@ -76,8 +76,8 @@ export class ExtractStockHistoryService {
           // Upsert the data into the database
           await this.prisma.yahooHistory.upsert({
             where: { stockId_date: { stockId: stock.id, date: item.date } },
-            update: { ...item, stockId: stock.id },
-            create: { ...item, stockId: stock.id },
+            update: { ...item, stockId: stock.id } as unknown as YahooHistory,
+            create: { ...item, stockId: stock.id } as unknown as YahooHistory,
           });
         }
       } catch (error) {
@@ -107,23 +107,5 @@ export class ExtractStockHistoryService {
         this.logger.error(`Failed to update data for ${stock.code}: ${error.message}`);
       }
     }
-  }
-
-  /**
-   * Fetches updated histories and dividends for a given list of stocks.
-   */
-  private async fetchUpdatedHistoriesAndDividends(
-    stocks: MinimalStock[],
-  ): Promise<[YahooHistory[], YahooDividendHistory[]]> {
-    const stockIds = stocks.map(stock => stock.id);
-    const histories = await this.prisma.yahooHistory.findMany({
-      where: { stockId: { in: stockIds } },
-    });
-
-    const dividends = await this.prisma.yahooDividendHistory.findMany({
-      where: { stockId: { in: stockIds } },
-    });
-
-    return [histories, dividends];
   }
 }
