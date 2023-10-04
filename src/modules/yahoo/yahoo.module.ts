@@ -13,13 +13,12 @@ import { PrismaService } from '@/app/infra/prisma/prisma.service';
 import { BatchProcessorService } from '@/app/utils/batch-processor/batch-processor.service';
 import { YahooController } from '@/modules/yahoo/controllers/yahoo-controller/yahoo-controller.controller';
 import { YahooCrawlerProvider } from '@/modules/yahoo/providers/yahoo_crawler.provider/yahoo_crawler.provider';
-import { YahooService } from '@/modules/yahoo/services/yahoo.service';
 import { ExtractStockHistoryService } from '@/modules/yahoo/usecases/extract-stock-history/extract-stock-history.service';
 import { Module } from '@nestjs/common';
 
 @Module({
   imports: [],
-  providers: [YahooService, YahooCrawlerProvider, ExtractStockHistoryService, PrismaService, BatchProcessorService],
+  providers: [YahooCrawlerProvider, ExtractStockHistoryService, PrismaService, BatchProcessorService],
   controllers: [YahooController],
 })
 export class YahooModule {}

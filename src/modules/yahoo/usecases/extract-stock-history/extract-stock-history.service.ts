@@ -57,10 +57,7 @@ export class ExtractStockHistoryService {
    * Updates both stock histories and dividends for a given batch of stocks.
    */
   private async updateStocks(stockBatch: MinimalStock[]): Promise<void> {
-    await Promise.all([
-      this.updateStockHistories(stockBatch),
-      // this.updateStockDividends(stockBatch)
-    ]);
+    await Promise.all([this.updateStockHistories(stockBatch), this.updateStockDividends(stockBatch)]);
   }
 
   /**
