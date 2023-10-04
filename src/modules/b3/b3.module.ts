@@ -2,7 +2,6 @@ import { PrismaService } from '@/app/infra/prisma/prisma.service';
 import { BatchProcessorService } from '@/app/utils/batch-processor/batch-processor.service';
 import { B3Controller } from '@/modules/b3/controllers/b3-controller/b3-controller.controller';
 import { B3CrawlerProvider } from '@/modules/b3/providers/b3_crawler.provider/b3_crawler.provider';
-import { B3Service } from '@/modules/b3/services/b3.service';
 import { ScrapeAllStocksService } from '@/modules/b3/usecases/scrape-all-stocks/scrape-all-stocks.service';
 import { UpdateAllStockService } from '@/modules/b3/usecases/update-all-stock/update-all-stock.service';
 import { Module } from '@nestjs/common';
@@ -20,14 +19,7 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [],
-  providers: [
-    B3Service,
-    B3CrawlerProvider,
-    ScrapeAllStocksService,
-    UpdateAllStockService,
-    PrismaService,
-    BatchProcessorService,
-  ],
+  providers: [B3CrawlerProvider, ScrapeAllStocksService, UpdateAllStockService, PrismaService, BatchProcessorService],
   controllers: [B3Controller],
 })
 export class B3HistoryModule {}
