@@ -1,13 +1,11 @@
 import { ExtractStockHistoryService } from '@/modules/yahoo/usecases/extract-stock-history/extract-stock-history.service';
-import { Controller, Logger, Post } from '@nestjs/common';
+import { Controller, Post } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Yahoo')
 @Controller('yahoo')
 export class YahooController {
-  private readonly logger = new Logger(YahooController.name);
-
   constructor(private readonly extractStockHistoryService: ExtractStockHistoryService) {}
 
   /**

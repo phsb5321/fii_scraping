@@ -16,7 +16,7 @@ describe('YahooDividend', () => {
     it('should create an instance with parameters', () => {
       // Arrange
       const testDate = new Date();
-      const testDividend = 5;
+      const testDividend = '4';
 
       // Act
       const dividend = new YahooDividendEntity({
